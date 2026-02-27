@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>将棋</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <header id="header">
+      <h1>将 棋</h1>
+      <div id="status">先手の番です</div>
+    </header>
+
+    <div id="game-area">
+      <div id="gote-hand" class="hand-area">
+        <div class="hand-label">☖ 後手 持ち駒</div>
+        <div class="hand-pieces" data-player="gote"></div>
+      </div>
+
+      <div id="board-container">
+        <div id="column-labels-top" class="column-labels">
+          <span>9</span><span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>
+        </div>
+        <div id="board-wrapper">
+          <div id="row-labels-left" class="row-labels">
+            <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>七</span><span>八</span><span>九</span>
+          </div>
+          <div id="board"></div>
+        </div>
+      </div>
+
+      <div id="sente-hand" class="hand-area">
+        <div class="hand-label">☗ 先手 持ち駒</div>
+        <div class="hand-pieces" data-player="sente"></div>
+      </div>
+    </div>
+
+    <div id="controls">
+      <button id="new-game-btn">新しい対局</button>
+    </div>
+
+    <div id="promotion-dialog" class="dialog hidden">
+      <div class="dialog-content">
+        <p>成りますか？</p>
+        <button id="promote-yes">成る</button>
+        <button id="promote-no">不成</button>
+      </div>
+    </div>
+
+    <div id="gameover-dialog" class="dialog hidden">
+      <div class="dialog-content">
+        <p id="gameover-message"></p>
+        <button id="gameover-new-game">新しい対局</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
