@@ -1,5 +1,6 @@
 import { Player } from './pieces.js';
 import { getLegalMoves, getLegalDrops, getPromotionStatus, isInCheck, isCheckmate } from './moves.js';
+import { playMove, playCapture, playCheck, playCheckmate } from './sound.js';
 
 export class UIController {
   constructor(gameState, renderer) {
@@ -105,32 +106,33 @@ export class UIController {
 
   _executeMove(fromRow, fromCol, toRow, toCol) {
     const piece = this.state.getPiece(fromRow, fromCol);
+    const captured = this.state.getPiece(toRow, toCol);
     const promoStatus = getPromotionStatus(piece, fromRow, toRow);
 
     if (promoStatus === 'mandatory') {
       this.state.movePiece(fromRow, fromCol, toRow, toCol, true);
       this._clearSelection();
-      this._postMove();
+      this._postMove(!!captured);
     } else if (promoStatus === 'optional') {
       this._showPromotionDialog((promote) => {
         this.state.movePiece(fromRow, fromCol, toRow, toCol, promote);
         this._clearSelection();
-        this._postMove();
+        this._postMove(!!captured);
       });
     } else {
       this.state.movePiece(fromRow, fromCol, toRow, toCol, false);
       this._clearSelection();
-      this._postMove();
+      this._postMove(!!captured);
     }
   }
 
   _executeDrop(pieceType, toRow, toCol) {
     this.state.dropPiece(pieceType, toRow, toCol, this.state.currentPlayer);
     this._clearSelection();
-    this._postMove();
+    this._postMove(false);
   }
 
-  _postMove() {
+  _postMove(captured) {
     this.state.switchTurn();
 
     // 王手チェック
@@ -141,6 +143,17 @@ export class UIController {
     if (inCheck && isCheckmate(this.state)) {
       this.state.gameOver = true;
       this.state.winner = this.state.opponent(this.state.currentPlayer);
+    }
+
+    // 効果音
+    if (this.state.gameOver) {
+      playCheckmate();
+    } else if (inCheck) {
+      playCheck();
+    } else if (captured) {
+      playCapture();
+    } else {
+      playMove();
     }
 
     this._updateDisplay();
