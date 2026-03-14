@@ -1,4 +1,6 @@
 // Web Audio APIによる効果音生成（外部ファイル不要）
+import { SOUND_CONFIG } from './config.js';
+
 let audioCtx = null;
 
 function getContext() {
@@ -27,26 +29,26 @@ export function playMove() {
 
   // フィルタ付きノイズで木の衝撃音を再現
   const noise = ctx.createBufferSource();
-  noise.buffer = createNoiseBuffer(ctx, 0.08);
+  noise.buffer = createNoiseBuffer(ctx, SOUND_CONFIG.MOVE.noiseDuration);
 
   const filter = ctx.createBiquadFilter();
   filter.type = 'bandpass';
-  filter.frequency.setValueAtTime(3000, now);
-  filter.Q.setValueAtTime(1.2, now);
+  filter.frequency.setValueAtTime(SOUND_CONFIG.MOVE.filterFreq, now);
+  filter.Q.setValueAtTime(SOUND_CONFIG.MOVE.filterQ, now);
 
   const env = ctx.createGain();
-  env.gain.setValueAtTime(0.3, now);
-  env.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+  env.gain.setValueAtTime(SOUND_CONFIG.MOVE.noiseGain, now);
+  env.gain.exponentialRampToValueAtTime(0.001, now + SOUND_CONFIG.MOVE.noiseDecay);
 
   // 低い木の共鳴音
   const osc = ctx.createOscillator();
   osc.type = 'sine';
-  osc.frequency.setValueAtTime(180, now);
-  osc.frequency.exponentialRampToValueAtTime(80, now + 0.06);
+  osc.frequency.setValueAtTime(SOUND_CONFIG.MOVE.oscFreqStart, now);
+  osc.frequency.exponentialRampToValueAtTime(SOUND_CONFIG.MOVE.oscFreqEnd, now + SOUND_CONFIG.MOVE.oscDuration);
 
   const oscEnv = ctx.createGain();
-  oscEnv.gain.setValueAtTime(0.15, now);
-  oscEnv.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+  oscEnv.gain.setValueAtTime(SOUND_CONFIG.MOVE.oscGain, now);
+  oscEnv.gain.exponentialRampToValueAtTime(0.001, now + SOUND_CONFIG.MOVE.oscDuration);
 
   noise.connect(filter);
   filter.connect(env);
@@ -56,9 +58,9 @@ export function playMove() {
   oscEnv.connect(ctx.destination);
 
   noise.start(now);
-  noise.stop(now + 0.08);
+  noise.stop(now + SOUND_CONFIG.MOVE.noiseDuration);
   osc.start(now);
-  osc.stop(now + 0.06);
+  osc.stop(now + SOUND_CONFIG.MOVE.oscDuration);
 }
 
 // 駒を取る音（パチン - より強め）
@@ -68,36 +70,36 @@ export function playCapture() {
 
   // 衝撃ノイズ（強め）
   const noise = ctx.createBufferSource();
-  noise.buffer = createNoiseBuffer(ctx, 0.12);
+  noise.buffer = createNoiseBuffer(ctx, SOUND_CONFIG.CAPTURE.noiseDuration);
 
   const filter = ctx.createBiquadFilter();
   filter.type = 'bandpass';
-  filter.frequency.setValueAtTime(3500, now);
-  filter.Q.setValueAtTime(0.8, now);
+  filter.frequency.setValueAtTime(SOUND_CONFIG.CAPTURE.filterFreq, now);
+  filter.Q.setValueAtTime(SOUND_CONFIG.CAPTURE.filterQ, now);
 
   const env = ctx.createGain();
-  env.gain.setValueAtTime(0.45, now);
-  env.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+  env.gain.setValueAtTime(SOUND_CONFIG.CAPTURE.noiseGain, now);
+  env.gain.exponentialRampToValueAtTime(0.001, now + SOUND_CONFIG.CAPTURE.noiseDecay);
 
   // 共鳴音（強め）
   const osc = ctx.createOscillator();
   osc.type = 'sine';
-  osc.frequency.setValueAtTime(220, now);
-  osc.frequency.exponentialRampToValueAtTime(60, now + 0.1);
+  osc.frequency.setValueAtTime(SOUND_CONFIG.CAPTURE.oscFreqStart, now);
+  osc.frequency.exponentialRampToValueAtTime(SOUND_CONFIG.CAPTURE.oscFreqEnd, now + SOUND_CONFIG.CAPTURE.oscDuration);
 
   const oscEnv = ctx.createGain();
-  oscEnv.gain.setValueAtTime(0.2, now);
-  oscEnv.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+  oscEnv.gain.setValueAtTime(SOUND_CONFIG.CAPTURE.oscGain, now);
+  oscEnv.gain.exponentialRampToValueAtTime(0.001, now + SOUND_CONFIG.CAPTURE.oscDuration);
 
   // 高い成分（パチンの鋭さ）
   const osc2 = ctx.createOscillator();
   osc2.type = 'sine';
-  osc2.frequency.setValueAtTime(800, now);
-  osc2.frequency.exponentialRampToValueAtTime(200, now + 0.04);
+  osc2.frequency.setValueAtTime(SOUND_CONFIG.CAPTURE.highFreqStart, now);
+  osc2.frequency.exponentialRampToValueAtTime(SOUND_CONFIG.CAPTURE.highFreqEnd, now + SOUND_CONFIG.CAPTURE.highDuration);
 
   const osc2Env = ctx.createGain();
-  osc2Env.gain.setValueAtTime(0.12, now);
-  osc2Env.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+  osc2Env.gain.setValueAtTime(SOUND_CONFIG.CAPTURE.highGain, now);
+  osc2Env.gain.exponentialRampToValueAtTime(0.001, now + SOUND_CONFIG.CAPTURE.highDuration);
 
   noise.connect(filter);
   filter.connect(env);
@@ -110,11 +112,11 @@ export function playCapture() {
   osc2Env.connect(ctx.destination);
 
   noise.start(now);
-  noise.stop(now + 0.12);
+  noise.stop(now + SOUND_CONFIG.CAPTURE.noiseDuration);
   osc.start(now);
-  osc.stop(now + 0.1);
+  osc.stop(now + SOUND_CONFIG.CAPTURE.oscDuration);
   osc2.start(now);
-  osc2.stop(now + 0.04);
+  osc2.stop(now + SOUND_CONFIG.CAPTURE.highDuration);
 }
 
 // 王手の警告音
@@ -122,22 +124,22 @@ export function playCheck() {
   const ctx = getContext();
   const now = ctx.currentTime;
 
-  // 短い2音の警告
-  for (let i = 0; i < 2; i++) {
-    const t = now + i * 0.12;
+  // 短い警告音
+  for (let i = 0; i < SOUND_CONFIG.CHECK.count; i++) {
+    const t = now + i * SOUND_CONFIG.CHECK.interval;
     const osc = ctx.createOscillator();
     osc.type = 'triangle';
-    osc.frequency.setValueAtTime(880, t);
+    osc.frequency.setValueAtTime(SOUND_CONFIG.CHECK.freq, t);
 
     const env = ctx.createGain();
     env.gain.setValueAtTime(0, t);
-    env.gain.linearRampToValueAtTime(0.2, t + 0.02);
-    env.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+    env.gain.linearRampToValueAtTime(SOUND_CONFIG.CHECK.gain, t + SOUND_CONFIG.CHECK.attackTime);
+    env.gain.exponentialRampToValueAtTime(0.001, t + SOUND_CONFIG.CHECK.releaseTime);
 
     osc.connect(env);
     env.connect(ctx.destination);
     osc.start(t);
-    osc.stop(t + 0.1);
+    osc.stop(t + SOUND_CONFIG.CHECK.releaseTime);
   }
 }
 
@@ -146,21 +148,20 @@ export function playCheckmate() {
   const ctx = getContext();
   const now = ctx.currentTime;
 
-  const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
-  notes.forEach((freq, i) => {
-    const t = now + i * 0.15;
+  SOUND_CONFIG.CHECKMATE.notes.forEach((freq, i) => {
+    const t = now + i * SOUND_CONFIG.CHECKMATE.interval;
     const osc = ctx.createOscillator();
     osc.type = 'sine';
     osc.frequency.setValueAtTime(freq, t);
 
     const env = ctx.createGain();
     env.gain.setValueAtTime(0, t);
-    env.gain.linearRampToValueAtTime(0.18, t + 0.03);
-    env.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+    env.gain.linearRampToValueAtTime(SOUND_CONFIG.CHECKMATE.gain, t + SOUND_CONFIG.CHECKMATE.attackTime);
+    env.gain.exponentialRampToValueAtTime(0.001, t + SOUND_CONFIG.CHECKMATE.releaseTime);
 
     osc.connect(env);
     env.connect(ctx.destination);
     osc.start(t);
-    osc.stop(t + 0.4);
+    osc.stop(t + SOUND_CONFIG.CHECKMATE.releaseTime);
   });
 }

@@ -1,0 +1,37 @@
+{
+  "name": "shogi",
+  "version": "1.0.0",
+  "description": "ブラウザで遊べる将棋アプリです。GitHub Pagesで公開しています。",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --experimental-vm-modules node_modules/.bin/jest --coverage",
+    "test:watch": "node --experimental-vm-modules node_modules/.bin/jest --watch"
+  },
+  "type": "module",
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {},
+    "coverageDirectory": "coverage",
+    "collectCoverageFrom": [
+      "js/config.js",
+      "js/game.js",
+      "js/moves.js",
+      "js/pieces.js"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/T3pp31/Shogi.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/T3pp31/Shogi/issues"
+  },
+  "homepage": "https://github.com/T3pp31/Shogi#readme",
+  "devDependencies": {
+    "@jest/globals": "^30.3.0",
+    "jest": "^30.3.0"
+  }
+}

@@ -1,4 +1,5 @@
 import { Player, getKanji, isPromoted, HAND_PIECE_TYPES } from './pieces.js';
+import { BOARD_CONFIG, DOM_SELECTORS } from './config.js';
 
 export class BoardRenderer {
   constructor(boardEl) {
@@ -10,9 +11,9 @@ export class BoardRenderer {
   _createBoard() {
     this.boardEl.innerHTML = '';
     this.cells = [];
-    for (let row = 0; row < 9; row++) {
+    for (let row = 0; row < BOARD_CONFIG.SIZE; row++) {
       this.cells[row] = [];
-      for (let col = 0; col < 9; col++) {
+      for (let col = 0; col < BOARD_CONFIG.SIZE; col++) {
         const cell = document.createElement('div');
         cell.className = 'cell';
         cell.dataset.row = row;
@@ -33,13 +34,13 @@ export class BoardRenderer {
     // 将棋盤の星は (3,3), (3,6), (6,3), (6,6) の交差点
     // 0-indexedでは row=2,5 col=2,5 のセルの右下角に配置
     // ただしCSSで左上にずらすことで交差点に描画
-    return (row === 3 || row === 6) && (col === 3 || col === 6);
+    return BOARD_CONFIG.STAR_POINTS.some(p => p.row === row && p.col === col);
   }
 
   // 盤面を描画
   render(gameState) {
-    for (let row = 0; row < 9; row++) {
-      for (let col = 0; col < 9; col++) {
+    for (let row = 0; row < BOARD_CONFIG.SIZE; row++) {
+      for (let col = 0; col < BOARD_CONFIG.SIZE; col++) {
         const cell = this.cells[row][col];
 
         // 既存の駒要素を削除
@@ -101,8 +102,8 @@ export class BoardRenderer {
 
   // 全ハイライトをクリア
   clearHighlights() {
-    for (let r = 0; r < 9; r++) {
-      for (let c = 0; c < 9; c++) {
+    for (let r = 0; r < BOARD_CONFIG.SIZE; r++) {
+      for (let c = 0; c < BOARD_CONFIG.SIZE; c++) {
         this.cells[r][c].classList.remove('selected', 'movable', 'has-enemy');
       }
     }
@@ -115,7 +116,7 @@ export class BoardRenderer {
   }
 
   _renderHand(gameState, player) {
-    const container = document.querySelector(`.hand-pieces[data-player="${player}"]`);
+    const container = document.querySelector(`${DOM_SELECTORS.HAND_PIECES}[data-player="${player}"]`);
     container.innerHTML = '';
 
     const hand = gameState.hands[player];

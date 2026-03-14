@@ -1,7 +1,8 @@
 import { PieceType, Player, getMovePattern, canPromote, PROMOTION_MAP, isPromoted } from './pieces.js';
+import { BOARD_CONFIG } from './config.js';
 
 function inBounds(row, col) {
-  return row >= 0 && row < 9 && col >= 0 && col < 9;
+  return row >= BOARD_CONFIG.MIN_INDEX && row <= BOARD_CONFIG.MAX_INDEX && col >= BOARD_CONFIG.MIN_INDEX && col <= BOARD_CONFIG.MAX_INDEX;
 }
 
 // 駒の到達可能なマスを取得（王手無視 = 疑似合法手）
@@ -50,8 +51,8 @@ export function isInCheck(state, player) {
   if (!kingPos) return false;
 
   const opponent = state.opponent(player);
-  for (let r = 0; r < 9; r++) {
-    for (let c = 0; c < 9; c++) {
+  for (let r = 0; r < BOARD_CONFIG.SIZE; r++) {
+    for (let c = 0; c < BOARD_CONFIG.SIZE; c++) {
       const p = state.getPiece(r, c);
       if (p && p.player === opponent) {
         const moves = getRawMoves(state, r, c);
@@ -85,7 +86,7 @@ export function getPromotionStatus(piece, fromRow, toRow) {
   if (isPromoted(piece.type)) return 'none';
 
   const isSente = piece.player === Player.SENTE;
-  const promoZone = isSente ? [0, 1, 2] : [6, 7, 8];
+  const promoZone = isSente ? BOARD_CONFIG.SENTE_PROMOTION_ZONE : BOARD_CONFIG.GOTE_PROMOTION_ZONE;
   const inZoneFrom = promoZone.includes(fromRow);
   const inZoneTo = promoZone.includes(toRow);
 
@@ -93,11 +94,11 @@ export function getPromotionStatus(piece, fromRow, toRow) {
 
   // 強制成り
   if (isSente) {
-    if ((piece.type === PieceType.PAWN || piece.type === PieceType.LANCE) && toRow === 0) return 'mandatory';
-    if (piece.type === PieceType.KNIGHT && toRow <= 1) return 'mandatory';
+    if ((piece.type === PieceType.PAWN || piece.type === PieceType.LANCE) && toRow === BOARD_CONFIG.SENTE_PAWN_LANCE_MIN_ROW) return 'mandatory';
+    if (piece.type === PieceType.KNIGHT && toRow <= BOARD_CONFIG.SENTE_KNIGHT_MIN_ROW) return 'mandatory';
   } else {
-    if ((piece.type === PieceType.PAWN || piece.type === PieceType.LANCE) && toRow === 8) return 'mandatory';
-    if (piece.type === PieceType.KNIGHT && toRow >= 7) return 'mandatory';
+    if ((piece.type === PieceType.PAWN || piece.type === PieceType.LANCE) && toRow === BOARD_CONFIG.GOTE_PAWN_LANCE_MAX_ROW) return 'mandatory';
+    if (piece.type === PieceType.KNIGHT && toRow >= BOARD_CONFIG.GOTE_KNIGHT_MAX_ROW) return 'mandatory';
   }
 
   return 'optional';
@@ -111,8 +112,8 @@ export function getLegalDrops(state, player, pieceType) {
 // 持ち駒が打てるマスを取得（内部用、打ち歩詰めチェックの有無を制御）
 function _getLegalDropsImpl(state, player, pieceType, checkUchifuzume) {
   const drops = [];
-  for (let r = 0; r < 9; r++) {
-    for (let c = 0; c < 9; c++) {
+  for (let r = 0; r < BOARD_CONFIG.SIZE; r++) {
+    for (let c = 0; c < BOARD_CONFIG.SIZE; c++) {
       if (state.getPiece(r, c) !== null) continue;
       if (!_isDropLegal(state, player, pieceType, r, c, checkUchifuzume)) continue;
 
@@ -131,7 +132,7 @@ function _getLegalDropsImpl(state, player, pieceType, checkUchifuzume) {
 function _isDropLegal(state, player, pieceType, row, col, checkUchifuzume) {
   // 二歩チェック
   if (pieceType === PieceType.PAWN) {
-    for (let r = 0; r < 9; r++) {
+    for (let r = 0; r < BOARD_CONFIG.SIZE; r++) {
       const p = state.getPiece(r, col);
       if (p && p.player === player && p.type === PieceType.PAWN) {
         return false;
@@ -141,13 +142,13 @@ function _isDropLegal(state, player, pieceType, row, col, checkUchifuzume) {
 
   // 行き所のない駒のチェック
   if (player === Player.SENTE) {
-    if (pieceType === PieceType.PAWN && row === 0) return false;
-    if (pieceType === PieceType.LANCE && row === 0) return false;
-    if (pieceType === PieceType.KNIGHT && row <= 1) return false;
+    if (pieceType === PieceType.PAWN && row === BOARD_CONFIG.SENTE_PAWN_LANCE_MIN_ROW) return false;
+    if (pieceType === PieceType.LANCE && row === BOARD_CONFIG.SENTE_PAWN_LANCE_MIN_ROW) return false;
+    if (pieceType === PieceType.KNIGHT && row <= BOARD_CONFIG.SENTE_KNIGHT_MIN_ROW) return false;
   } else {
-    if (pieceType === PieceType.PAWN && row === 8) return false;
-    if (pieceType === PieceType.LANCE && row === 8) return false;
-    if (pieceType === PieceType.KNIGHT && row >= 7) return false;
+    if (pieceType === PieceType.PAWN && row === BOARD_CONFIG.GOTE_PAWN_LANCE_MAX_ROW) return false;
+    if (pieceType === PieceType.LANCE && row === BOARD_CONFIG.GOTE_PAWN_LANCE_MAX_ROW) return false;
+    if (pieceType === PieceType.KNIGHT && row >= BOARD_CONFIG.GOTE_KNIGHT_MAX_ROW) return false;
   }
 
   // 打ち歩詰めチェック（循環防止: isCheckmate内から呼ばれた場合はスキップ）
@@ -180,8 +181,8 @@ function _isCheckmateSimple(state) {
 // 合法手が一つもないかチェック
 function _hasNoLegalMoves(state, player, checkUchifuzume) {
   // 盤上の駒で逃げられるか
-  for (let r = 0; r < 9; r++) {
-    for (let c = 0; c < 9; c++) {
+  for (let r = 0; r < BOARD_CONFIG.SIZE; r++) {
+    for (let c = 0; c < BOARD_CONFIG.SIZE; c++) {
       const piece = state.getPiece(r, c);
       if (piece && piece.player === player) {
         if (getLegalMoves(state, r, c).length > 0) return false;

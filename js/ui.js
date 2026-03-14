@@ -1,6 +1,7 @@
 import { Player } from './pieces.js';
 import { getLegalMoves, getLegalDrops, getPromotionStatus, isInCheck, isCheckmate } from './moves.js';
 import { playMove, playCapture, playCheck, playCheckmate } from './sound.js';
+import { DOM_SELECTORS, UI_TEXT } from './config.js';
 
 export class UIController {
   constructor(gameState, renderer) {
@@ -26,7 +27,7 @@ export class UIController {
     });
 
     // 持ち駒クリック
-    document.querySelectorAll('.hand-pieces').forEach(container => {
+    document.querySelectorAll(DOM_SELECTORS.HAND_PIECES).forEach(container => {
       container.addEventListener('click', (e) => {
         const el = e.target.closest('.hand-piece');
         if (!el) return;
@@ -35,9 +36,9 @@ export class UIController {
     });
 
     // 新しい対局ボタン
-    document.getElementById('new-game-btn').addEventListener('click', () => this.newGame());
-    document.getElementById('gameover-new-game').addEventListener('click', () => {
-      document.getElementById('gameover-dialog').classList.add('hidden');
+    document.getElementById(DOM_SELECTORS.NEW_GAME_BTN).addEventListener('click', () => this.newGame());
+    document.getElementById(DOM_SELECTORS.GAMEOVER_NEW_GAME).addEventListener('click', () => {
+      document.getElementById(DOM_SELECTORS.GAMEOVER_DIALOG).classList.add('hidden');
       this.newGame();
     });
   }
@@ -90,8 +91,8 @@ export class UIController {
     this.validMoves = getLegalDrops(this.state, player, pieceType);
 
     // 持ち駒のハイライト
-    document.querySelectorAll('.hand-piece').forEach(el => el.classList.remove('selected'));
-    const handPieces = document.querySelectorAll(`.hand-piece[data-piece-type="${pieceType}"][data-player="${player}"]`);
+    document.querySelectorAll(DOM_SELECTORS.HAND_PIECE).forEach(el => el.classList.remove('selected'));
+    const handPieces = document.querySelectorAll(`${DOM_SELECTORS.HAND_PIECE}[data-piece-type="${pieceType}"][data-player="${player}"]`);
     handPieces.forEach(el => el.classList.add('selected'));
 
     this.renderer.highlightMoves(this.validMoves, this.state);
@@ -168,28 +169,28 @@ export class UIController {
     this.renderer.renderHands(this.state);
 
     // ステータス更新
-    const statusEl = document.getElementById('status');
-    const playerName = this.state.currentPlayer === Player.SENTE ? '先手' : '後手';
+    const statusEl = document.getElementById(DOM_SELECTORS.STATUS);
+    const playerName = this.state.currentPlayer === Player.SENTE ? UI_TEXT.SENTE_NAME : UI_TEXT.GOTE_NAME;
 
     if (this.state.gameOver) {
-      const winnerName = this.state.winner === Player.SENTE ? '先手' : '後手';
-      statusEl.textContent = `${winnerName}の勝ち！`;
+      const winnerName = this.state.winner === Player.SENTE ? UI_TEXT.SENTE_NAME : UI_TEXT.GOTE_NAME;
+      statusEl.textContent = `${winnerName}${UI_TEXT.WIN_SUFFIX}`;
       statusEl.classList.remove('check');
     } else if (this.state.inCheck) {
-      statusEl.textContent = `${playerName}の番です（王手！）`;
+      statusEl.textContent = `${playerName}${UI_TEXT.CHECK_SUFFIX}`;
       statusEl.classList.add('check');
     } else {
-      statusEl.textContent = `${playerName}の番です`;
+      statusEl.textContent = `${playerName}${UI_TEXT.TURN_SUFFIX}`;
       statusEl.classList.remove('check');
     }
   }
 
   _showPromotionDialog(callback) {
-    const dialog = document.getElementById('promotion-dialog');
+    const dialog = document.getElementById(DOM_SELECTORS.PROMOTION_DIALOG);
     dialog.classList.remove('hidden');
 
-    const yesBtn = document.getElementById('promote-yes');
-    const noBtn = document.getElementById('promote-no');
+    const yesBtn = document.getElementById(DOM_SELECTORS.PROMOTE_YES);
+    const noBtn = document.getElementById(DOM_SELECTORS.PROMOTE_NO);
 
     const onYes = () => {
       cleanup();
@@ -210,9 +211,9 @@ export class UIController {
   }
 
   _showGameOverDialog() {
-    const winnerName = this.state.winner === Player.SENTE ? '先手' : '後手';
-    document.getElementById('gameover-message').textContent = `${winnerName}の勝ち！`;
-    document.getElementById('gameover-dialog').classList.remove('hidden');
+    const winnerName = this.state.winner === Player.SENTE ? UI_TEXT.SENTE_NAME : UI_TEXT.GOTE_NAME;
+    document.getElementById(DOM_SELECTORS.GAMEOVER_MESSAGE).textContent = `${winnerName}${UI_TEXT.WIN_SUFFIX}`;
+    document.getElementById(DOM_SELECTORS.GAMEOVER_DIALOG).classList.remove('hidden');
   }
 
   _clearSelection() {
@@ -220,7 +221,7 @@ export class UIController {
     this.selectedHandPiece = null;
     this.validMoves = [];
     this.renderer.clearHighlights();
-    document.querySelectorAll('.hand-piece').forEach(el => el.classList.remove('selected'));
+    document.querySelectorAll(DOM_SELECTORS.HAND_PIECE).forEach(el => el.classList.remove('selected'));
   }
 
   newGame() {

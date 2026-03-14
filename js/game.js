@@ -1,4 +1,5 @@
 import { PieceType, Player, HAND_PIECE_TYPES, PROMOTION_MAP, unpromote } from './pieces.js';
+import { BOARD_CONFIG } from './config.js';
 
 export class GameState {
   constructor() {
@@ -8,7 +9,7 @@ export class GameState {
   reset() {
     // 9x9の盤面 (row 0 = 一段目/上側, row 8 = 九段目/下側)
     // 各セルは { type, player } or null
-    this.board = Array.from({ length: 9 }, () => Array(9).fill(null));
+    this.board = Array.from({ length: BOARD_CONFIG.SIZE }, () => Array(BOARD_CONFIG.SIZE).fill(null));
 
     // 持ち駒: { sente: { pawn: 0, lance: 0, ... }, gote: { ... } }
     this.hands = {
@@ -54,13 +55,13 @@ export class GameState {
     this.board[1][1] = { type: PieceType.ROOK, player: G };
     this.board[1][7] = { type: PieceType.BISHOP, player: G };
     // 3段目 (row 2): 歩9枚
-    for (let col = 0; col < 9; col++) {
+    for (let col = 0; col < BOARD_CONFIG.SIZE; col++) {
       this.board[2][col] = { type: PieceType.PAWN, player: G };
     }
 
     // 先手陣（下3段: row 6-8）
     // 7段目 (row 6): 歩9枚
-    for (let col = 0; col < 9; col++) {
+    for (let col = 0; col < BOARD_CONFIG.SIZE; col++) {
       this.board[6][col] = { type: PieceType.PAWN, player: S };
     }
     // 8段目 (row 7): 角（8筋=col1）と飛（2筋=col7）
@@ -81,7 +82,7 @@ export class GameState {
   }
 
   getPiece(row, col) {
-    if (row < 0 || row > 8 || col < 0 || col > 8) return null;
+    if (row < BOARD_CONFIG.MIN_INDEX || row > BOARD_CONFIG.MAX_INDEX || col < BOARD_CONFIG.MIN_INDEX || col > BOARD_CONFIG.MAX_INDEX) return null;
     return this.board[row][col];
   }
 
@@ -140,8 +141,8 @@ export class GameState {
 
   // 玉の位置を取得
   findKing(player) {
-    for (let row = 0; row < 9; row++) {
-      for (let col = 0; col < 9; col++) {
+    for (let row = 0; row < BOARD_CONFIG.SIZE; row++) {
+      for (let col = 0; col < BOARD_CONFIG.SIZE; col++) {
         const p = this.board[row][col];
         if (p && p.type === PieceType.KING && p.player === player) {
           return { row, col };
