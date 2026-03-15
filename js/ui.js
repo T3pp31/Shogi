@@ -1,7 +1,8 @@
 import { Player } from './pieces.js';
 import { getLegalMoves, getLegalDrops, getPromotionStatus, isInCheck, isCheckmate } from './moves.js';
 import { playMove, playCapture, playCheck, playCheckmate } from './sound.js';
-import { DOM_SELECTORS, UI_TEXT } from './config.js';
+import { DOM_SELECTORS, UI_TEXT, AI_CONFIG } from './config.js';
+import { ShogiAI } from './ai.js';
 
 export class UIController {
   constructor(gameState, renderer) {
@@ -12,6 +13,12 @@ export class UIController {
     this.selectedPiece = null;      // { row, col }
     this.selectedHandPiece = null;  // { type, player }
     this.validMoves = [];
+
+    // AIモード関連
+    this.gameMode = null;       // 'ai' | 'pvp'
+    this.ai = null;             // ShogiAI インスタンス
+    this.humanPlayer = null;    // Player.SENTE | Player.GOTE
+    this.isAIThinking = false;  // AI思考中フラグ
 
     this._bindEvents();
   }
@@ -41,10 +48,55 @@ export class UIController {
       document.getElementById(DOM_SELECTORS.GAMEOVER_DIALOG).classList.add('hidden');
       this.newGame();
     });
+
+    // モード選択
+    document.getElementById(DOM_SELECTORS.MODE_AI).addEventListener('click', () => {
+      document.getElementById(DOM_SELECTORS.MODE_DIALOG).classList.add('hidden');
+      document.getElementById(DOM_SELECTORS.SIDE_DIALOG).classList.remove('hidden');
+    });
+
+    document.getElementById(DOM_SELECTORS.MODE_PVP).addEventListener('click', () => {
+      document.getElementById(DOM_SELECTORS.MODE_DIALOG).classList.add('hidden');
+      this._startGame('pvp');
+    });
+
+    // 先手後手選択
+    document.getElementById(DOM_SELECTORS.SIDE_SENTE).addEventListener('click', () => {
+      document.getElementById(DOM_SELECTORS.SIDE_DIALOG).classList.add('hidden');
+      this._startGame('ai', Player.SENTE);
+    });
+
+    document.getElementById(DOM_SELECTORS.SIDE_GOTE).addEventListener('click', () => {
+      document.getElementById(DOM_SELECTORS.SIDE_DIALOG).classList.add('hidden');
+      this._startGame('ai', Player.GOTE);
+    });
+  }
+
+  _startGame(mode, humanSide = null) {
+    this.gameMode = mode;
+    this.state.reset();
+    this._clearSelection();
+
+    if (mode === 'ai') {
+      this.humanPlayer = humanSide;
+      const aiPlayer = humanSide === Player.SENTE ? Player.GOTE : Player.SENTE;
+      this.ai = new ShogiAI(aiPlayer);
+      this._updateDisplay();
+      // AIが先手の場合、AIの手番から開始
+      if (aiPlayer === Player.SENTE) {
+        this._triggerAIMove();
+      }
+    } else {
+      this.ai = null;
+      this.humanPlayer = null;
+      this._updateDisplay();
+    }
   }
 
   _handleBoardClick(row, col) {
     if (this.state.gameOver) return;
+    if (this.isAIThinking) return;
+    if (this._isAITurn()) return;
 
     const piece = this.state.getPiece(row, col);
 
@@ -84,6 +136,8 @@ export class UIController {
 
   _handleHandClick(pieceType, player) {
     if (this.state.gameOver) return;
+    if (this.isAIThinking) return;
+    if (this._isAITurn()) return;
     if (player !== this.state.currentPlayer) return;
 
     this._clearSelection();
@@ -96,6 +150,10 @@ export class UIController {
     handPieces.forEach(el => el.classList.add('selected'));
 
     this.renderer.highlightMoves(this.validMoves, this.state);
+  }
+
+  _isAITurn() {
+    return this.gameMode === 'ai' && this.state.currentPlayer !== this.humanPlayer;
   }
 
   _selectBoardPiece(row, col) {
@@ -161,6 +219,58 @@ export class UIController {
 
     if (this.state.gameOver) {
       this._showGameOverDialog();
+      return;
+    }
+
+    // AIターンの自動実行
+    if (this._isAITurn()) {
+      this._triggerAIMove();
+    }
+  }
+
+  _triggerAIMove() {
+    this.isAIThinking = true;
+    this._showThinking(true);
+
+    const thinkStart = Date.now();
+
+    setTimeout(() => {
+      const bestMove = this.ai.getBestMove(this.state);
+
+      if (!bestMove) {
+        this.isAIThinking = false;
+        this._showThinking(false);
+        return;
+      }
+
+      const elapsed = Date.now() - thinkStart;
+      const remaining = Math.max(0, AI_CONFIG.MIN_THINK_TIME - elapsed);
+
+      setTimeout(() => {
+        this._executeAIMove(bestMove);
+        this.isAIThinking = false;
+        this._showThinking(false);
+      }, remaining);
+    }, AI_CONFIG.MOVE_DELAY);
+  }
+
+  _executeAIMove(move) {
+    if (move.type === 'move') {
+      const captured = this.state.getPiece(move.toRow, move.toCol);
+      this.state.movePiece(move.fromRow, move.fromCol, move.toRow, move.toCol, move.promote);
+      this._postMove(!!captured);
+    } else {
+      this.state.dropPiece(move.pieceType, move.toRow, move.toCol, this.state.currentPlayer);
+      this._postMove(false);
+    }
+  }
+
+  _showThinking(show) {
+    const el = document.getElementById(DOM_SELECTORS.AI_THINKING);
+    if (show) {
+      el.classList.remove('hidden');
+    } else {
+      el.classList.add('hidden');
     }
   }
 
@@ -225,9 +335,11 @@ export class UIController {
   }
 
   newGame() {
-    this.state.reset();
+    this.isAIThinking = false;
+    this._showThinking(false);
     this._clearSelection();
-    this._updateDisplay();
+    // モード選択画面に戻す
+    document.getElementById(DOM_SELECTORS.MODE_DIALOG).classList.remove('hidden');
   }
 
   init() {

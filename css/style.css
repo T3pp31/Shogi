@@ -400,3 +400,24 @@ body {
     --cell-size: min(10.5vw, 40px);
   }
 }
+
+/* AI思考中表示 */
+.ai-thinking {
+  text-align: center;
+  padding: 8px 20px;
+  color: #e8d5b5;
+  font-size: 1rem;
+}
+
+.ai-thinking.hidden {
+  display: none;
+}
+
+/* モード選択・先手後手選択ダイアログのボタン */
+#mode-dialog .dialog-content button,
+#side-dialog .dialog-content button {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+  min-width: 200px;
+}

@@ -13,6 +13,7 @@
     "transform": {},
     "coverageDirectory": "coverage",
     "collectCoverageFrom": [
+      "js/ai.js",
       "js/config.js",
       "js/game.js",
       "js/moves.js",

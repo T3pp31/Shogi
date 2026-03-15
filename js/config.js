@@ -33,6 +33,13 @@ export const DOM_SELECTORS = {
   PROMOTE_NO: 'promote-no',
   HAND_PIECES: '.hand-pieces',
   HAND_PIECE: '.hand-piece',
+  MODE_DIALOG: 'mode-dialog',
+  MODE_AI: 'mode-ai',
+  MODE_PVP: 'mode-pvp',
+  SIDE_DIALOG: 'side-dialog',
+  SIDE_SENTE: 'side-sente',
+  SIDE_GOTE: 'side-gote',
+  AI_THINKING: 'ai-thinking',
 };
 
 // UI表示テキスト
@@ -42,6 +49,69 @@ export const UI_TEXT = {
   TURN_SUFFIX: 'の番です',
   CHECK_SUFFIX: 'の番です（王手！）',
   WIN_SUFFIX: 'の勝ち！',
+  AI_THINKING: 'AI思考中...',
+  MODE_AI: 'AI対戦',
+  MODE_PVP: '2人対戦',
+  SIDE_SENTE_LABEL: '先手（あなたが先に指す）',
+  SIDE_GOTE_LABEL: '後手（AIが先に指す）',
+};
+
+// 駒の価値（AI評価関数用）
+export const PIECE_VALUES = {
+  king: 15000,
+  rook: 1000,
+  bishop: 800,
+  gold: 550,
+  silver: 500,
+  knight: 350,
+  lance: 300,
+  pawn: 100,
+  prook: 1300,
+  pbishop: 1100,
+  psilver: 420,
+  pknight: 420,
+  plance: 420,
+  ppawn: 420,
+};
+
+// 位置ボーナス（先手視点: row=0が上, row=8が下）
+// 後手の場合は row を (8 - row) に反転して使用
+// テーブルがない駒タイプはボーナス0
+export const POSITION_BONUS = {
+  pawn: [
+    [  0,   0,   0,   0,   0,   0,   0,   0,   0],
+    [  0,   0,   0,   0,   0,   0,   0,   0,   0],
+    [  0,   0,   0,   0,   0,   0,   0,   0,   0],
+    [  5,   5,  10,  15,  15,  15,  10,   5,   5],
+    [  5,   5,  10,  15,  20,  15,  10,   5,   5],
+    [ 10,  10,  15,  20,  25,  20,  15,  10,  10],
+    [  0,   0,   0,   0,   0,   0,   0,   0,   0],
+    [  0,   0,   0,   0,   0,   0,   0,   0,   0],
+    [  0,   0,   0,   0,   0,   0,   0,   0,   0],
+  ],
+  king: [
+    [-30, -30, -30, -30, -30, -30, -30, -30, -30],
+    [-20, -20, -20, -20, -20, -20, -20, -20, -20],
+    [-10, -10, -10, -10, -10, -10, -10, -10, -10],
+    [  0,   0,   0,   0,   0,   0,   0,   0,   0],
+    [  0,   0,   0,   0,   0,   0,   0,   0,   0],
+    [  0,   0,   0,   0,   0,   0,   0,   0,   0],
+    [  5,   5,   5,   5,   0,   5,   5,   5,   5],
+    [ 10,  15,  15,   5,   0,   5,  15,  15,  10],
+    [ 15,  20,  20,  10,   5,  10,  20,  20,  15],
+  ],
+};
+
+// AI設定
+export const AI_CONFIG = {
+  DEFAULT_DEPTH: 3,
+  QUIESCENCE_MAX_DEPTH: 2,
+  MIN_THINK_TIME: 500,
+  MOVE_DELAY: 100,
+  HAND_PIECE_MULTIPLIER: 1.15,
+  KING_SAFETY_BONUS: 30,
+  CHECK_BONUS: 50,
+  PROMOTION_BONUS: 40,
 };
 
 // 音声パラメータ

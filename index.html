@@ -55,6 +55,24 @@
         <button id="gameover-new-game">新しい対局</button>
       </div>
     </div>
+
+    <div id="mode-dialog" class="dialog">
+      <div class="dialog-content">
+        <p>対局モードを選んでください</p>
+        <button id="mode-ai">AI対戦</button>
+        <button id="mode-pvp">2人対戦</button>
+      </div>
+    </div>
+
+    <div id="side-dialog" class="dialog hidden">
+      <div class="dialog-content">
+        <p>あなたの手番を選んでください</p>
+        <button id="side-sente">先手（あなたが先に指す）</button>
+        <button id="side-gote">後手（AIが先に指す）</button>
+      </div>
+    </div>
+
+    <div id="ai-thinking" class="ai-thinking hidden">AI思考中...</div>
   </div>
 
   <script type="module" src="js/main.js"></script>
