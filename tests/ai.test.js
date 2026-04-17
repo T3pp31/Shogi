@@ -46,7 +46,7 @@
  * | 39 | _minimax: 詰みで極端な値                | 正常系 | 詰みの局面                                     | ±Infinity相当の値が返る                        |
  */
 
-import { describe, test, expect, beforeEach } from '@jest/globals';
+import { describe, test, expect, beforeEach, jest } from '@jest/globals';
 import { ShogiAI } from '../js/ai.js';
 import { GameState } from '../js/game.js';
 import { Player, PieceType } from '../js/pieces.js';
@@ -173,6 +173,44 @@ describe('ShogiAI - getBestMove', () => {
     const ai = new ShogiAI(Player.GOTE, 1);
     const move = ai.getBestMove(state);
     expect(move).not.toBeNull();
+  });
+
+  test('root で alpha が更新され、2手目以降の _minimax に反映される', () => {
+    // Given: getBestMove のルート探索を2手だけに固定
+    const state = createEmptyStateWithKings();
+    state.board[8][4] = { type: PieceType.KING, player: Player.SENTE };
+    state.board[0][4] = { type: PieceType.KING, player: Player.GOTE };
+    const ai = new ShogiAI(Player.SENTE, 2);
+    const moveA = { type: 'move', fromRow: 8, fromCol: 4, toRow: 7, toCol: 4, promote: false };
+    const moveB = { type: 'move', fromRow: 8, fromCol: 4, toRow: 7, toCol: 5, promote: false };
+
+    jest.spyOn(ai, '_generateAllMoves').mockReturnValue([moveA, moveB]);
+    jest.spyOn(ai, '_orderMoves').mockImplementation(() => {});
+    jest.spyOn(ai, '_applyMove').mockImplementation(s => s.clone());
+    const minimaxSpy = jest.spyOn(ai, '_minimax')
+      .mockReturnValueOnce(10)
+      .mockReturnValueOnce(5);
+
+    // When
+    ai.getBestMove(state);
+
+    // Then: 1手目は alpha=-Infinity、2手目は alpha=10 で呼ばれる
+    expect(minimaxSpy).toHaveBeenNthCalledWith(
+      1,
+      expect.any(GameState),
+      ai.depth - 1,
+      -Infinity,
+      Infinity,
+      false
+    );
+    expect(minimaxSpy).toHaveBeenNthCalledWith(
+      2,
+      expect.any(GameState),
+      ai.depth - 1,
+      10,
+      Infinity,
+      false
+    );
   });
 });
 

@@ -42,7 +42,7 @@ export class ShogiAI {
 
     let bestMove = null;
     let bestScore = -Infinity;
-    const alpha = -Infinity;
+    let alpha = -Infinity;
     const beta = Infinity;
 
     for (const move of moves) {
@@ -56,6 +56,9 @@ export class ShogiAI {
         bestScore = score;
         bestMove = move;
       }
+      alpha = Math.max(alpha, bestScore);
+      // root ノードでは相手手番の探索境界を tighten するため alpha のみ更新し、
+      // beta は「未探索の上限」として不変のまま子ノードに渡す。
     }
 
     return bestMove;
