@@ -51,6 +51,7 @@ import { ShogiAI } from '../js/ai.js';
 import { GameState } from '../js/game.js';
 import { Player, PieceType } from '../js/pieces.js';
 import { AI_CONFIG, PIECE_VALUES, POSITION_BONUS, BOARD_CONFIG } from '../js/config.js';
+import { clearBoard, clearHands } from './helpers/board-test-helpers.js';
 
 // ---- ヘルパー関数 ----
 
@@ -58,17 +59,9 @@ import { AI_CONFIG, PIECE_VALUES, POSITION_BONUS, BOARD_CONFIG } from '../js/con
 function createEmptyStateWithKings() {
   const state = new GameState();
   // 全駒を除去
-  for (let r = 0; r < 9; r++) {
-    for (let c = 0; c < 9; c++) {
-      state.board[r][c] = null;
-    }
-  }
+  clearBoard(state);
   // 持ち駒もリセット
-  for (const player of [Player.SENTE, Player.GOTE]) {
-    for (const key of Object.keys(state.hands[player])) {
-      state.hands[player][key] = 0;
-    }
-  }
+  clearHands(state);
   return state;
 }
 
@@ -130,11 +123,7 @@ describe('ShogiAI - getBestMove', () => {
     // Then: null が返る
     const state = createEmptyStateWithKings();
     // 王も除去して合法手0の状態にする
-    for (let r = 0; r < 9; r++) {
-      for (let c = 0; c < 9; c++) {
-        state.board[r][c] = null;
-      }
-    }
+    clearBoard(state);
     const ai = new ShogiAI(Player.SENTE, 1);
     const move = ai.getBestMove(state);
     expect(move).toBeNull();
@@ -238,7 +227,7 @@ describe('ShogiAI - _generateAllMoves', () => {
     const moves = ai._generateAllMoves(state, Player.SENTE);
     const knightMoves = moves.filter(m => m.type === 'move' && m.fromRow === 2 && m.fromCol === 4);
     // 桂馬の移動先はrow=0（強制成り）
-    const mandatoryPromo = knightMoves.filter(m => m.toRow === 0);
+    const mandatoryPromo = knightMoves.filter(m => m.toRow === BOARD_CONFIG.MIN_INDEX);
     if (mandatoryPromo.length > 0) {
       expect(mandatoryPromo.every(m => m.promote === true)).toBe(true);
     }
