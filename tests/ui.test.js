@@ -32,7 +32,7 @@
  * | 25 | _startGame: humanPlayer の設定          | 正常系 | mode='ai', humanSide=GOTE                    | humanPlayer === Player.GOTE                   |
  */
 
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import { Player, PieceType } from '../js/pieces.js';
 import { GameState } from '../js/game.js';
 import { AI_CONFIG } from '../js/config.js';
@@ -76,6 +76,8 @@ class TestableUILogic {
     this.ai = null;
     this.humanPlayer = null;
     this.isAIThinking = false;
+    this.aiStartTimerId = null;
+    this.aiApplyTimerId = null;
 
     // テスト用スパイ
     this._triggerAIMoveCalled = false;
@@ -93,6 +95,10 @@ class TestableUILogic {
   }
 
   _startGame(mode, humanSide = null) {
+    this._clearAITimers();
+    this.isAIThinking = false;
+    this._showThinking(false);
+
     this.gameMode = mode;
     this.state.reset();
     this._clearSelection();
@@ -100,7 +106,10 @@ class TestableUILogic {
     if (mode === 'ai') {
       this.humanPlayer = humanSide;
       const aiPlayer = humanSide === Player.SENTE ? Player.GOTE : Player.SENTE;
-      this.ai = { aiPlayer };  // ShogiAI のスタブ
+      this.ai = {
+        aiPlayer,
+        getBestMove: () => null,
+      };  // ShogiAI のスタブ
       this._updateDisplay();
       if (aiPlayer === Player.SENTE) {
         this._triggerAIMove();
@@ -146,10 +155,51 @@ class TestableUILogic {
     }
   }
 
-  // --- スタブメソッド（テスト内で上書き可能） ---
-
   _triggerAIMove() {
     this._triggerAIMoveCalled = true;
+    this._clearAITimers();
+    this.isAIThinking = true;
+    this._showThinking(true);
+    if (!this.ai || typeof this.ai.getBestMove !== 'function') {
+      this.isAIThinking = false;
+      this._showThinking(false);
+      return;
+    }
+
+    const thinkStart = Date.now();
+
+    this.aiStartTimerId = setTimeout(() => {
+      this.aiStartTimerId = null;
+      const bestMove = this.ai.getBestMove(this.state);
+
+      if (!bestMove) {
+        this.isAIThinking = false;
+        this._showThinking(false);
+        return;
+      }
+
+      const elapsed = Date.now() - thinkStart;
+      const remaining = Math.max(0, AI_CONFIG.MIN_THINK_TIME - elapsed);
+      this.aiApplyTimerId = setTimeout(() => {
+        this.aiApplyTimerId = null;
+        this._executeAIMove(bestMove);
+        this.isAIThinking = false;
+        this._showThinking(false);
+      }, remaining);
+    }, AI_CONFIG.MOVE_DELAY);
+  }
+
+  // --- スタブメソッド（テスト内で上書き可能） ---
+
+  _clearAITimers() {
+    if (this.aiStartTimerId !== null) {
+      clearTimeout(this.aiStartTimerId);
+      this.aiStartTimerId = null;
+    }
+    if (this.aiApplyTimerId !== null) {
+      clearTimeout(this.aiApplyTimerId);
+      this.aiApplyTimerId = null;
+    }
   }
 
   _showThinking(show) {
@@ -172,6 +222,7 @@ class TestableUILogic {
   }
 
   newGame() {
+    this._clearAITimers();
     this.isAIThinking = false;
     this._showThinking(false);
     this._clearSelection();
@@ -386,6 +437,52 @@ describe('newGame()', () => {
     logic._clearSelectionCalled = false;
     logic.newGame();
     expect(logic._clearSelectionCalled).toBe(true);
+  });
+});
+
+describe('非同期回帰: AI思考中に newGame() を呼んだ場合', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  test('時間経過後も盤面が勝手に更新されない', () => {
+    const state = new GameState();
+    const logic = makeLogic(state, {
+      isInCheck: () => false,
+      isCheckmate: () => false,
+    });
+
+    logic.gameMode = 'ai';
+    logic.humanPlayer = Player.GOTE;
+    logic.ai = {
+      getBestMove: () => ({
+        type: 'move',
+        fromRow: 6,
+        fromCol: 4,
+        toRow: 5,
+        toCol: 4,
+        promote: false,
+      }),
+    };
+
+    const beforePiece = state.getPiece(6, 4);
+    expect(beforePiece?.type).toBe(PieceType.PAWN);
+    expect(state.getPiece(5, 4)).toBeNull();
+
+    logic._triggerAIMove();
+    logic.newGame();
+
+    jest.advanceTimersByTime(AI_CONFIG.MOVE_DELAY + AI_CONFIG.MIN_THINK_TIME + 10);
+
+    const afterFrom = state.getPiece(6, 4);
+    const afterTo = state.getPiece(5, 4);
+    expect(afterFrom?.type).toBe(PieceType.PAWN);
+    expect(afterTo).toBeNull();
+    expect(logic.isAIThinking).toBe(false);
   });
 });
 
