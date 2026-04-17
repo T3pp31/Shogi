@@ -32,6 +32,7 @@
 import { describe, test, expect, beforeEach } from '@jest/globals';
 import { GameState } from '../js/game.js';
 import { BOARD_CONFIG } from '../js/config.js';
+import { clearBoard } from './helpers/board-test-helpers.js';
 import { PieceType, Player } from '../js/pieces.js';
 import {
   getRawMoves,
@@ -158,11 +159,7 @@ describe('getLegalDrops() - 打てるマスの検証', () => {
   // テスト用に盤面を空にして玉だけ残すヘルパー
   function setupMinimalBoard(senteKingRow, goteKingRow) {
     // 全マスをクリア
-    for (let r = 0; r < BOARD_CONFIG.SIZE; r++) {
-      for (let c = 0; c < BOARD_CONFIG.SIZE; c++) {
-        state.board[r][c] = null;
-      }
-    }
+    clearBoard(state);
     state.board[senteKingRow][4] = { type: PieceType.KING, player: Player.SENTE };
     state.board[goteKingRow][4] = { type: PieceType.KING, player: Player.GOTE };
   }
@@ -264,11 +261,7 @@ describe('isInCheck() - 王手判定', () => {
     // Given: 全マスクリア後、先手玉と後手飛車を同列に配置
     // When: 先手の王手状態を確認する
     // Then: true
-    for (let r = 0; r < BOARD_CONFIG.SIZE; r++) {
-      for (let c = 0; c < BOARD_CONFIG.SIZE; c++) {
-        state.board[r][c] = null;
-      }
-    }
+    clearBoard(state);
     state.board[8][4] = { type: PieceType.KING, player: Player.SENTE };
     state.board[0][4] = { type: PieceType.ROOK, player: Player.GOTE };
     state.board[0][0] = { type: PieceType.KING, player: Player.GOTE };
@@ -280,11 +273,7 @@ describe('isInCheck() - 王手判定', () => {
     // Given: 全マスクリア後、先手玉と後手飛車の間に先手の駒を置く
     // When: 先手の王手状態を確認する
     // Then: false
-    for (let r = 0; r < BOARD_CONFIG.SIZE; r++) {
-      for (let c = 0; c < BOARD_CONFIG.SIZE; c++) {
-        state.board[r][c] = null;
-      }
-    }
+    clearBoard(state);
     state.board[8][4] = { type: PieceType.KING, player: Player.SENTE };
     state.board[4][4] = { type: PieceType.GOLD, player: Player.SENTE }; // 遮断
     state.board[0][4] = { type: PieceType.ROOK, player: Player.GOTE };
@@ -311,11 +300,7 @@ describe('isCheckmate() - 詰み判定', () => {
     // 先手玉 (8,8)、後手飛車2枚 + 後手金で完全に詰み
     // When: isCheckmate を呼ぶ
     // Then: true
-    for (let r = 0; r < BOARD_CONFIG.SIZE; r++) {
-      for (let c = 0; c < BOARD_CONFIG.SIZE; c++) {
-        state.board[r][c] = null;
-      }
-    }
+    clearBoard(state);
     state.hands = {
       [Player.SENTE]: { rook: 0, bishop: 0, gold: 0, silver: 0, knight: 0, lance: 0, pawn: 0 },
       [Player.GOTE]: { rook: 0, bishop: 0, gold: 0, silver: 0, knight: 0, lance: 0, pawn: 0 },
@@ -344,11 +329,7 @@ describe('getRawMoves() - 移動可能マスの取得', () => {
     // Given: 先手の歩が (5, 4) にいる（周囲は空）
     // When: getRawMoves を呼ぶ
     // Then: { row: 4, col: 4 } のみ
-    for (let r = 0; r < BOARD_CONFIG.SIZE; r++) {
-      for (let c = 0; c < BOARD_CONFIG.SIZE; c++) {
-        state.board[r][c] = null;
-      }
-    }
+    clearBoard(state);
     state.board[5][4] = { type: PieceType.PAWN, player: Player.SENTE };
 
     const moves = getRawMoves(state, 5, 4);
@@ -360,11 +341,7 @@ describe('getRawMoves() - 移動可能マスの取得', () => {
     // Given: 先手の歩が row=0（先手にとって盤端）にいる
     // When: getRawMoves を呼ぶ
     // Then: 空配列（盤外は移動不可）
-    for (let r = 0; r < BOARD_CONFIG.SIZE; r++) {
-      for (let c = 0; c < BOARD_CONFIG.SIZE; c++) {
-        state.board[r][c] = null;
-      }
-    }
+    clearBoard(state);
     state.board[BOARD_CONFIG.MIN_INDEX][4] = { type: PieceType.PAWN, player: Player.SENTE };
 
     const moves = getRawMoves(state, BOARD_CONFIG.MIN_INDEX, 4);
@@ -375,11 +352,7 @@ describe('getRawMoves() - 移動可能マスの取得', () => {
     // Given: 飛車が中央 (4, 4) にいる（周囲は空、玉だけ除く）
     // When: getRawMoves を呼ぶ
     // Then: 縦横の移動可能マス（4方向に合計 8*4 マス分...実際は 8+8+8+8 - 4方向の端含む）
-    for (let r = 0; r < BOARD_CONFIG.SIZE; r++) {
-      for (let c = 0; c < BOARD_CONFIG.SIZE; c++) {
-        state.board[r][c] = null;
-      }
-    }
+    clearBoard(state);
     state.board[4][4] = { type: PieceType.ROOK, player: Player.SENTE };
 
     const moves = getRawMoves(state, 4, 4);
@@ -423,11 +396,7 @@ describe('getLegalMoves() - 合法手の取得（自王手防止）', () => {
     // 金をこの列から外すと玉が王手になるため、同列への移動（col=4 上下）は許可されない
     // When: getLegalMoves で金の合法手を取得する
     // Then: col=4 で row が 6 以下のマス（玉を危険にさらす手）は除外される
-    for (let r = 0; r < BOARD_CONFIG.SIZE; r++) {
-      for (let c = 0; c < BOARD_CONFIG.SIZE; c++) {
-        state.board[r][c] = null;
-      }
-    }
+    clearBoard(state);
     // 先手玉 (8,4)、先手金 (7,4)、後手飛車 (0,4) で先手金が縦を遮断している
     state.board[8][4] = { type: PieceType.KING, player: Player.SENTE };
     state.board[7][4] = { type: PieceType.GOLD, player: Player.SENTE };
