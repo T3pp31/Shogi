@@ -19,6 +19,8 @@ export class UIController {
     this.ai = null;             // ShogiAI インスタンス
     this.humanPlayer = null;    // Player.SENTE | Player.GOTE
     this.isAIThinking = false;  // AI思考中フラグ
+    this.aiStartTimerId = null; // AI着手開始タイマーID
+    this.aiApplyTimerId = null; // AI着手反映タイマーID
 
     this._bindEvents();
   }
@@ -73,6 +75,10 @@ export class UIController {
   }
 
   _startGame(mode, humanSide = null) {
+    this._clearAITimers();
+    this.isAIThinking = false;
+    this._showThinking(false);
+
     this.gameMode = mode;
     this.state.reset();
     this._clearSelection();
@@ -229,12 +235,19 @@ export class UIController {
   }
 
   _triggerAIMove() {
+    this._clearAITimers();
     this.isAIThinking = true;
     this._showThinking(true);
+    if (!this.ai || typeof this.ai.getBestMove !== 'function') {
+      this.isAIThinking = false;
+      this._showThinking(false);
+      return;
+    }
 
     const thinkStart = Date.now();
 
-    setTimeout(() => {
+    this.aiStartTimerId = setTimeout(() => {
+      this.aiStartTimerId = null;
       const bestMove = this.ai.getBestMove(this.state);
 
       if (!bestMove) {
@@ -246,12 +259,24 @@ export class UIController {
       const elapsed = Date.now() - thinkStart;
       const remaining = Math.max(0, AI_CONFIG.MIN_THINK_TIME - elapsed);
 
-      setTimeout(() => {
+      this.aiApplyTimerId = setTimeout(() => {
+        this.aiApplyTimerId = null;
         this._executeAIMove(bestMove);
         this.isAIThinking = false;
         this._showThinking(false);
       }, remaining);
     }, AI_CONFIG.MOVE_DELAY);
+  }
+
+  _clearAITimers() {
+    if (this.aiStartTimerId !== null) {
+      clearTimeout(this.aiStartTimerId);
+      this.aiStartTimerId = null;
+    }
+    if (this.aiApplyTimerId !== null) {
+      clearTimeout(this.aiApplyTimerId);
+      this.aiApplyTimerId = null;
+    }
   }
 
   _executeAIMove(move) {
@@ -335,6 +360,7 @@ export class UIController {
   }
 
   newGame() {
+    this._clearAITimers();
     this.isAIThinking = false;
     this._showThinking(false);
     this._clearSelection();
