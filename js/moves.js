@@ -72,6 +72,9 @@ export function getLegalMoves(state, row, col) {
 
   const rawMoves = getRawMoves(state, row, col);
   return rawMoves.filter(move => {
+    const target = state.getPiece(move.row, move.col);
+    if (target?.type === PieceType.KING) return false;
+
     const clone = state.clone();
     clone.board[move.row][move.col] = { ...piece };
     clone.board[row][col] = null;
