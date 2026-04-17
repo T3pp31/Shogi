@@ -96,6 +96,7 @@ export class GameState {
     if (!piece) return false;
 
     const captured = this.board[toRow][toCol];
+    if (captured?.type === PieceType.KING) return false;
 
     // 取った駒を持ち駒に加える
     if (captured) {

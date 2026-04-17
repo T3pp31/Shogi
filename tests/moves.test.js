@@ -394,6 +394,23 @@ describe('getRawMoves() - 移動可能マスの取得', () => {
     state.board[4][4] = null;
     expect(getRawMoves(state, 4, 4)).toHaveLength(0);
   });
+
+  test('相手の王がいるマスへの移動は合法手に含まれない', () => {
+    // Given: 先手の飛車が後手玉と同じ筋にいる
+    // When: getLegalMoves を呼ぶ
+    // Then: 後手玉のマスは含まれない
+    for (let r = 0; r < BOARD_CONFIG.SIZE; r++) {
+      for (let c = 0; c < BOARD_CONFIG.SIZE; c++) {
+        state.board[r][c] = null;
+      }
+    }
+    state.board[8][4] = { type: PieceType.KING, player: Player.SENTE };
+    state.board[4][4] = { type: PieceType.ROOK, player: Player.SENTE };
+    state.board[1][4] = { type: PieceType.KING, player: Player.GOTE };
+
+    const moves = getLegalMoves(state, 4, 4);
+    expect(moves.some(move => move.row === 1 && move.col === 4)).toBe(false);
+  });
 });
 
 // ============================================================

@@ -234,6 +234,7 @@ describe('GameState.movePiece() - 駒の移動', () => {
     // Given: 成れる位置の先手の歩
     // When: promote=true で移動する
     // Then: 成り歩（と金）になる
+    state.board[0][4] = null;
     state.board[1][4] = { type: PieceType.PAWN, player: Player.SENTE };
     state.movePiece(1, 4, 0, 4, true);
     expect(state.board[0][4].type).toBe(PieceType.PROMOTED_PAWN);
@@ -247,6 +248,25 @@ describe('GameState.movePiece() - 駒の移動', () => {
     expect(state.lastMove).toEqual({
       fromRow: 6, fromCol: 4, toRow: 5, toCol: 4,
     });
+  });
+
+  test('捕獲対象が王の場合: false が返り盤面が変化しない', () => {
+    // Given: 先手歩が後手玉のマスへ移動可能な位置にある
+    // When: movePiece を直接呼んで玉を取ろうとする
+    // Then: false が返り、元の位置関係が維持される
+    for (let r = 0; r < BOARD_CONFIG.SIZE; r++) {
+      for (let c = 0; c < BOARD_CONFIG.SIZE; c++) {
+        state.board[r][c] = null;
+      }
+    }
+    state.board[8][4] = { type: PieceType.KING, player: Player.SENTE };
+    state.board[0][4] = { type: PieceType.KING, player: Player.GOTE };
+    state.board[3][4] = { type: PieceType.PAWN, player: Player.SENTE };
+
+    const result = state.movePiece(3, 4, 0, 4, false);
+    expect(result).toBe(false);
+    expect(state.board[3][4]).toEqual({ type: PieceType.PAWN, player: Player.SENTE });
+    expect(state.board[0][4]).toEqual({ type: PieceType.KING, player: Player.GOTE });
   });
 });
 
