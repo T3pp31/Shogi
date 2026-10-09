@@ -22,6 +22,9 @@ export class UIController {
     this.aiStartTimerId = null; // AI着手開始タイマーID
     this.aiApplyTimerId = null; // AI着手反映タイマーID
 
+    // 対局終了判定の依存（テストから差し替え可能にするため注入ポイント化）
+    this._checkDeps = { isInCheck, isCheckmate, hasNoLegalMoves };
+
     this._bindEvents();
   }
 
@@ -198,6 +201,7 @@ export class UIController {
   }
 
   _postMove(captured) {
+    const { isInCheck, isCheckmate, hasNoLegalMoves } = this._checkDeps;
     this.state.switchTurn();
 
     // 王手チェック
