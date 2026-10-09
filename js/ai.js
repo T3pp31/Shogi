@@ -40,7 +40,8 @@ export class ShogiAI {
 
     this._orderMoves(moves, state);
 
-    let bestMove = null;
+    // 全候補手のスコアが詰みスコア(-Infinity)でも合法手を必ず返すため、初期値を先頭手にする
+    let bestMove = moves[0];
     let bestScore = -Infinity;
     let alpha = -Infinity;
     const beta = Infinity;

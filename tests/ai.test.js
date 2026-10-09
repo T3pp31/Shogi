@@ -201,6 +201,32 @@ describe('ShogiAI - getBestMove', () => {
       false
     );
   });
+
+  test('全候補手が詰みスコアでもnullを返さない（合法手あり）', () => {
+    // Given: 合法手はあるが、どの手を指しても相手の応手で詰みになる局面
+    //   先手玉(0,0)は後手飛(2,0)に王手され、後手銀(0,1)・金(1,1)が逃げ道を封じる
+    //   先手の唯一の合法手は歩(1,0)打ちだが、飛に取られると詰み（スコア -Infinity）
+    // When: getBestMove（depth=3）を呼ぶ
+    // Then: null ではなく合法手（歩打ち）が返る
+    const state = new GameState();
+    clearBoard(state);
+    clearHands(state);
+    state.board[0][0] = { type: PieceType.KING, player: Player.SENTE };
+    state.board[2][0] = { type: PieceType.ROOK, player: Player.GOTE };
+    state.board[0][1] = { type: PieceType.SILVER, player: Player.GOTE };
+    state.board[1][1] = { type: PieceType.GOLD, player: Player.GOTE };
+    state.board[8][4] = { type: PieceType.KING, player: Player.GOTE };
+    state.hands[Player.SENTE].pawn = 1;
+    state.currentPlayer = Player.SENTE;
+
+    const ai = new ShogiAI(Player.SENTE, 3);
+    const move = ai.getBestMove(state);
+    expect(move).not.toBeNull();
+    expect(move.type).toBe('drop');
+    expect(move.pieceType).toBe(PieceType.PAWN);
+    expect(move.toRow).toBe(1);
+    expect(move.toCol).toBe(0);
+  });
 });
 
 // ============================================================
