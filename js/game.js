@@ -154,8 +154,10 @@ export class GameState {
   }
 
   // 盤面のディープコピー
+  // new GameState() を使うと初期配置の構築が無駄に行われるため、
+  // プロトタイプを直接継承した空インスタンスに必要フィールドを代入する
   clone() {
-    const copy = new GameState();
+    const copy = Object.create(GameState.prototype);
     copy.board = this.board.map(row =>
       row.map(cell => (cell ? { ...cell } : null))
     );
