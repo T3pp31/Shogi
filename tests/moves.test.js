@@ -29,10 +29,10 @@
  * |22 | getLegalMoves: 自王手防止         | 異常系 | 動かすと自分の王が王手になる駒         | その手は含まれない                   |
  */
 
-import { describe, test, expect, beforeEach } from '@jest/globals';
+import { describe, test, expect, beforeEach, jest } from '@jest/globals';
 import { GameState } from '../js/game.js';
 import { BOARD_CONFIG } from '../js/config.js';
-import { clearBoard } from './helpers/board-test-helpers.js';
+import { clearBoard, clearHands } from './helpers/board-test-helpers.js';
 import { PieceType, Player } from '../js/pieces.js';
 import {
   getRawMoves,
@@ -41,6 +41,7 @@ import {
   getPromotionStatus,
   isInCheck,
   isCheckmate,
+  hasNoLegalMoves,
 } from '../js/moves.js';
 
 let state;
@@ -317,6 +318,69 @@ describe('isCheckmate() - 詰み判定', () => {
     state.currentPlayer = Player.SENTE;
 
     expect(isCheckmate(state)).toBe(true);
+  });
+});
+
+describe('hasNoLegalMoves() - 合法手なし判定', () => {
+  test('初期配置では合法手があるため false', () => {
+    // Given: 初期盤面
+    // When: hasNoLegalMoves を呼ぶ
+    // Then: false
+    expect(hasNoLegalMoves(state)).toBe(false);
+  });
+
+  test('王手されていないが合法手がない局面（ステイルメイト相当）で true', () => {
+    // Given: 先手玉(8,4)は王手されていないが、全ての移動先が後手駒の利きに覆われる
+    //   後手: 玉(0,0), 香(7,3)/香(7,5)（銀6,2・銀6,6に守られ取りに行けない）,
+    //          桂(5,3)/桂(5,5)（(7,4)を封じる）
+    //   先手は持ち駒なし → 合法手ゼロ
+    // When: hasNoLegalMoves を呼ぶ
+    // Then: true（王手ではないので isCheckmate は false）
+    clearBoard(state);
+    clearHands(state);
+    state.board[8][4] = { type: PieceType.KING, player: Player.SENTE };
+    state.board[0][0] = { type: PieceType.KING, player: Player.GOTE };
+    state.board[7][3] = { type: PieceType.LANCE, player: Player.GOTE };
+    state.board[7][5] = { type: PieceType.LANCE, player: Player.GOTE };
+    state.board[5][3] = { type: PieceType.KNIGHT, player: Player.GOTE };
+    state.board[5][5] = { type: PieceType.KNIGHT, player: Player.GOTE };
+    state.board[6][2] = { type: PieceType.SILVER, player: Player.GOTE };
+    state.board[6][6] = { type: PieceType.SILVER, player: Player.GOTE };
+    state.currentPlayer = Player.SENTE;
+
+    expect(isInCheck(state, Player.SENTE)).toBe(false);
+    expect(hasNoLegalMoves(state)).toBe(true);
+  });
+
+  test('王手されている詰み局面でも true', () => {
+    // Given: 先手玉(8,8)が後手飛車・金に詰まされている局面
+    // When: hasNoLegalMoves を呼ぶ
+    // Then: true
+    clearBoard(state);
+    clearHands(state);
+    state.board[8][8] = { type: PieceType.KING, player: Player.SENTE };
+    state.board[8][6] = { type: PieceType.ROOK, player: Player.GOTE };
+    state.board[6][8] = { type: PieceType.ROOK, player: Player.GOTE };
+    state.board[6][6] = { type: PieceType.GOLD, player: Player.GOTE };
+    state.board[0][0] = { type: PieceType.KING, player: Player.GOTE };
+    state.currentPlayer = Player.SENTE;
+
+    expect(hasNoLegalMoves(state)).toBe(true);
+  });
+
+  test('王手されているが逃げ道がある局面では false', () => {
+    // Given: 先手玉(8,4)が後手飛車(8,0)に王手されているが、(7,4)に逃げられる
+    // When: hasNoLegalMoves を呼ぶ
+    // Then: false
+    clearBoard(state);
+    clearHands(state);
+    state.board[8][4] = { type: PieceType.KING, player: Player.SENTE };
+    state.board[8][0] = { type: PieceType.ROOK, player: Player.GOTE };
+    state.board[0][0] = { type: PieceType.KING, player: Player.GOTE };
+    state.currentPlayer = Player.SENTE;
+
+    expect(isInCheck(state, Player.SENTE)).toBe(true);
+    expect(hasNoLegalMoves(state)).toBe(false);
   });
 });
 

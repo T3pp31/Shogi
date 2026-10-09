@@ -174,6 +174,11 @@ export function isCheckmate(state) {
   return _hasNoLegalMoves(state, player, true);
 }
 
+// 手番プレイヤーの合法手が一つもないか判定（王手の有無は問わない）
+export function hasNoLegalMoves(state) {
+  return _hasNoLegalMoves(state, state.currentPlayer, true);
+}
+
 // 簡易詰み判定（打ち歩詰めチェックなし - 循環防止用）
 function _isCheckmateSimple(state) {
   const player = state.currentPlayer;

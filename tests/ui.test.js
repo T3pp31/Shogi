@@ -36,6 +36,8 @@ import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globa
 import { Player, PieceType } from '../js/pieces.js';
 import { GameState } from '../js/game.js';
 import { AI_CONFIG } from '../js/config.js';
+import { UIController } from '../js/ui.js';
+import { clearBoard, clearHands } from './helpers/board-test-helpers.js';
 
 // ----- DOM スタブ -----
 // UIController は DOM に依存するため、テスト用にスタブを構築する
@@ -696,5 +698,168 @@ describe('_isAITurn() 境界値テスト', () => {
     state.currentPlayer = Player.SENTE;
     // Player.SENTE !== null なので true
     expect(logic._isAITurn()).toBe(true);
+  });
+});
+
+// ============================================================
+// UIController 本体のテスト（js/ui.js を直接実行する）
+// ============================================================
+
+// 効果音（sound.js）は window.AudioContext に依存するため、node 環境では
+// 最小限の AudioContext モックを window に設定して実行する
+class MockAudioContextForUI {
+  constructor() {
+    this.state = 'running';
+    this.currentTime = 0.5;
+    this.sampleRate = 44100;
+    this.destination = {};
+    this.resume = () => Promise.resolve();
+    this.createBuffer = () => ({ getChannelData: () => new Float32Array(0) });
+  }
+
+  createBufferSource() {
+    return { buffer: null, connect: () => {}, start: () => {}, stop: () => {} };
+  }
+
+  createBiquadFilter() {
+    return { type: '', frequency: { setValueAtTime: () => {} }, Q: { setValueAtTime: () => {} }, connect: () => {} };
+  }
+
+  createGain() {
+    return {
+      gain: { setValueAtTime: () => {}, exponentialRampToValueAtTime: () => {}, linearRampToValueAtTime: () => {} },
+      connect: () => {},
+    };
+  }
+
+  createOscillator() {
+    return { type: '', frequency: { setValueAtTime: () => {}, exponentialRampToValueAtTime: () => {} }, connect: () => {}, start: () => {}, stop: () => {} };
+  }
+}
+
+// UIController は constructor で document.getElementById / querySelectorAll に
+// 依存するため、テスト中はスタブに差し替える
+function withDocumentStub(fn) {
+  const originalDocument = globalThis.document;
+  const makeEl = () => ({
+    classList: { add: jest.fn(), remove: jest.fn() },
+    addEventListener: jest.fn(),
+    textContent: '',
+  });
+  globalThis.document = {
+    getElementById: jest.fn(() => makeEl()),
+    querySelectorAll: jest.fn(() => []),
+  };
+  try {
+    return fn();
+  } finally {
+    if (originalDocument === undefined) {
+      delete globalThis.document;
+    } else {
+      globalThis.document = originalDocument;
+    }
+  }
+}
+
+function createRendererStub() {
+  return {
+    boardEl: { addEventListener: jest.fn() },
+    render: jest.fn(),
+    renderHands: jest.fn(),
+    highlightMoves: jest.fn(),
+    highlightSelected: jest.fn(),
+    clearHighlights: jest.fn(),
+  };
+}
+
+describe('UIController._postMove() - 本体コード（ステイルメイト相当の終了判定）', () => {
+  let originalWindow;
+
+  beforeEach(() => {
+    originalWindow = globalThis.window;
+    globalThis.window = { AudioContext: MockAudioContextForUI };
+  });
+
+  afterEach(() => {
+    if (originalWindow === undefined) {
+      delete globalThis.window;
+    } else {
+      globalThis.window = originalWindow;
+    }
+  });
+
+  test('王手されていない合法手なしの局面で対局が終了し手番側が負けになる', () => {
+    // Given: 先手玉(8,4)は王手されていないが全ての移動先が後手駒の利きに覆われる
+    //   後手: 玉(0,0), 香(7,3)/香(7,5)（銀に守られ取りに行けない）, 桂(5,3)/桂(5,5)
+    //   先手は持ち駒なし → switchTurn 後の先手に合法手がない
+    // When: _postMove(false) を呼ぶ（switchTurn 後に先手の手番になる）
+    // Then: gameOver=true, winner=GOTE
+    withDocumentStub(() => {
+      const state = new GameState();
+      clearBoard(state);
+      clearHands(state);
+      state.board[8][4] = { type: PieceType.KING, player: Player.SENTE };
+      state.board[0][0] = { type: PieceType.KING, player: Player.GOTE };
+      state.board[7][3] = { type: PieceType.LANCE, player: Player.GOTE };
+      state.board[7][5] = { type: PieceType.LANCE, player: Player.GOTE };
+      state.board[5][3] = { type: PieceType.KNIGHT, player: Player.GOTE };
+      state.board[5][5] = { type: PieceType.KNIGHT, player: Player.GOTE };
+      state.board[6][2] = { type: PieceType.SILVER, player: Player.GOTE };
+      state.board[6][6] = { type: PieceType.SILVER, player: Player.GOTE };
+      state.currentPlayer = Player.GOTE; // switchTurn 後に先手の手番になる
+
+      const controller = new UIController(state, createRendererStub());
+      controller._postMove(false);
+
+      expect(state.gameOver).toBe(true);
+      expect(state.winner).toBe(Player.GOTE);
+      expect(state.inCheck).toBe(false);
+    });
+  });
+
+  test('合法手が残っている通常の手では対局は終了しない', () => {
+    // Given: 初期盤面で後手の手番（switchTurn 後に先手）
+    // When: _postMove(false) を呼ぶ
+    // Then: gameOver=false
+    withDocumentStub(() => {
+      const state = new GameState();
+      state.currentPlayer = Player.GOTE;
+
+      const controller = new UIController(state, createRendererStub());
+      controller._postMove(false);
+
+      expect(state.gameOver).toBe(false);
+      expect(state.winner).toBeNull();
+    });
+  });
+
+  test('王手されていないが合法手がない局面では _triggerAIMove は呼ばれない', () => {
+    // Given: ステイルメイト相当局面（AIモード・AIは先手）
+    // When: _postMove(false) を呼ぶ
+    // Then: gameOver=true になり、AI タイマーは起動しない
+    withDocumentStub(() => {
+      const state = new GameState();
+      clearBoard(state);
+      clearHands(state);
+      state.board[8][4] = { type: PieceType.KING, player: Player.SENTE };
+      state.board[0][0] = { type: PieceType.KING, player: Player.GOTE };
+      state.board[7][3] = { type: PieceType.LANCE, player: Player.GOTE };
+      state.board[7][5] = { type: PieceType.LANCE, player: Player.GOTE };
+      state.board[5][3] = { type: PieceType.KNIGHT, player: Player.GOTE };
+      state.board[5][5] = { type: PieceType.KNIGHT, player: Player.GOTE };
+      state.board[6][2] = { type: PieceType.SILVER, player: Player.GOTE };
+      state.board[6][6] = { type: PieceType.SILVER, player: Player.GOTE };
+      state.currentPlayer = Player.GOTE;
+
+      const controller = new UIController(state, createRendererStub());
+      controller.gameMode = 'ai';
+      controller.humanPlayer = Player.GOTE; // AI は先手
+      const triggerSpy = jest.spyOn(controller, '_triggerAIMove');
+
+      controller._postMove(false);
+
+      expect(state.gameOver).toBe(true);
+      expect(triggerSpy).not.toHaveBeenCalled();
+    });
   });
 });

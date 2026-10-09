@@ -1,5 +1,5 @@
 import { Player } from './pieces.js';
-import { getLegalMoves, getLegalDrops, getPromotionStatus, isInCheck, isCheckmate } from './moves.js';
+import { getLegalMoves, getLegalDrops, getPromotionStatus, isInCheck, isCheckmate, hasNoLegalMoves } from './moves.js';
 import { playMove, playCapture, playCheck, playCheckmate } from './sound.js';
 import { DOM_SELECTORS, UI_TEXT, AI_CONFIG } from './config.js';
 import { ShogiAI } from './ai.js';
@@ -204,8 +204,12 @@ export class UIController {
     const inCheck = isInCheck(this.state, this.state.currentPlayer);
     this.state.inCheck = inCheck;
 
-    // 詰みチェック
-    if (inCheck && isCheckmate(this.state)) {
+    // 詰み・合法手なしチェック（将棋では合法手を持たないプレイヤーは負け）
+    // 王手時は isCheckmate が内部で合法手なし判定を行うため、非王手時のみ確認する
+    const isGameOver = inCheck
+      ? isCheckmate(this.state)
+      : hasNoLegalMoves(this.state);
+    if (isGameOver) {
       this.state.gameOver = true;
       this.state.winner = this.state.opponent(this.state.currentPlayer);
     }
