@@ -14,7 +14,7 @@
   --highlight-last-move: rgba(255, 235, 59, 0.3);
   --hand-bg: rgba(221, 184, 122, 0.15);
   --hand-border: rgba(221, 184, 122, 0.3);
-  --cell-size: min(10vw, 64px);
+  --cell-size: min(10vw, 52px);
   --piece-font-size: calc(var(--cell-size) * 0.42);
   --dialog-bg: rgba(0, 0, 0, 0.7);
 }
@@ -366,7 +366,9 @@ body {
 }
 
 /* Responsive */
-@media (max-width: 640px) {
+/* 横並びレイアウトは盤9x64+枠6+持ち駒160+gap32+padding20=686px 以上必要なため、
+   686px 未満のタブレット幅では縦並びに切り替える */
+@media (max-width: 800px) {
   :root {
     --cell-size: min(10vw, 52px);
   }
