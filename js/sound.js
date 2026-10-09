@@ -7,6 +7,11 @@ function getContext() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
+  // ユーザージェスチャー外で生成された AudioContext は Safari 等で
+  // suspended のままになり音が鳴らないため、resume を試みる
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
   return audioCtx;
 }
 
