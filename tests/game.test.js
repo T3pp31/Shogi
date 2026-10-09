@@ -32,10 +32,11 @@
  * |25 | clone(): 独立性             | 正常系 | clone後に元を変更                    | クローンは変更されない             |
  */
 
-import { describe, test, expect, beforeEach } from '@jest/globals';
+import { describe, test, expect, beforeEach, jest } from '@jest/globals';
 import { GameState } from '../js/game.js';
 import { BOARD_CONFIG } from '../js/config.js';
 import { PieceType, Player } from '../js/pieces.js';
+import { clearBoard } from './helpers/board-test-helpers.js';
 
 let state;
 
@@ -353,5 +354,64 @@ describe('GameState.clone() - 盤面のコピー', () => {
     // Then: currentPlayer が等しい
     const clone = state.clone();
     expect(clone.currentPlayer).toBe(state.currentPlayer);
+  });
+
+  test('クローンは gameOver / winner / inCheck / lastMove もコピーする', () => {
+    // Given: 対局終了状態に変更した GameState
+    // When: clone() する
+    // Then: 全フィールドが元と等しい
+    state.gameOver = true;
+    state.winner = Player.SENTE;
+    state.inCheck = true;
+    state.lastMove = { fromRow: 6, fromCol: 4, toRow: 5, toCol: 4 };
+    const clone = state.clone();
+    expect(clone.gameOver).toBe(true);
+    expect(clone.winner).toBe(Player.SENTE);
+    expect(clone.inCheck).toBe(true);
+    expect(clone.lastMove).toEqual({ fromRow: 6, fromCol: 4, toRow: 5, toCol: 4 });
+  });
+
+  test('クローンは GameState インスタンスとしてメソッドを利用できる', () => {
+    // Given: 初期状態の GameState
+    // When: clone() して駒を移動する
+    // Then: movePiece / switchTurn / findKing が正常動作する
+    const clone = state.clone();
+    expect(clone instanceof GameState).toBe(true);
+    expect(clone.movePiece(6, 4, 5, 4, false)).toBe(true);
+    expect(clone.getPiece(6, 4)).toBeNull();
+    expect(clone.getPiece(5, 4)?.type).toBe(PieceType.PAWN);
+    clone.switchTurn();
+    expect(clone.currentPlayer).toBe(Player.GOTE);
+    expect(clone.findKing(Player.SENTE)).toEqual({ row: 8, col: 4 });
+  });
+
+  test('空盤・持ち駒ありのカスタム局面でも完全にコピーされる', () => {
+    // Given: clearBoard 後・持ち駒を設定したカスタム局面
+    // When: clone() する
+    // Then: 盤面は空のまま、持ち駒・手番が元と等しい
+    clearBoard(state);
+    state.hands[Player.SENTE][PieceType.PAWN] = 2;
+    state.hands[Player.SENTE][PieceType.ROOK] = 1;
+    state.hands[Player.GOTE][PieceType.BISHOP] = 1;
+    state.currentPlayer = Player.GOTE;
+    const clone = state.clone();
+    for (let row = BOARD_CONFIG.MIN_INDEX; row <= BOARD_CONFIG.MAX_INDEX; row += 1) {
+      for (let col = BOARD_CONFIG.MIN_INDEX; col <= BOARD_CONFIG.MAX_INDEX; col += 1) {
+        expect(clone.getPiece(row, col)).toBeNull();
+      }
+    }
+    expect(clone.hands[Player.SENTE]).toEqual({ ...state.hands[Player.SENTE] });
+    expect(clone.hands[Player.GOTE]).toEqual({ ...state.hands[Player.GOTE] });
+    expect(clone.currentPlayer).toBe(Player.GOTE);
+  });
+
+  test('clone は初期配置の構築（reset）を行わない', () => {
+    // Given: 初期状態の GameState
+    // When: GameState.prototype.reset をスパイして clone() する
+    // Then: reset は呼ばれない
+    const resetSpy = jest.spyOn(GameState.prototype, 'reset');
+    state.clone();
+    expect(resetSpy).not.toHaveBeenCalled();
+    resetSpy.mockRestore();
   });
 });
