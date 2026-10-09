@@ -17,7 +17,8 @@
       "js/config.js",
       "js/game.js",
       "js/moves.js",
-      "js/pieces.js"
+      "js/pieces.js",
+      "js/ui.js"
     ]
   },
   "repository": {
