@@ -891,24 +891,27 @@ describe('ShogiAI - _minimax', () => {
 // ============================================================
 describe('ShogiAI - カバレッジ向上（静止探索・特殊ケース）', () => {
   test('_evaluate: AIが王手されている場合はCHECK_BONUSが減算される', () => {
-    // Given: 後手の飛車が先手の王に王手している局面
+    // Given: 同じ後手飛車1枚を「王手になる位置」と「王手にならない位置」に置いた2局面
+    //   飛車は POSITION_BONUS を持たないため、両局面の差分は純粋に CHECK_BONUS のみ
     // When: 先手AIで_evaluate
-    // Then: 王手されていない局面よりスコアが低い
-    const baseState = createEmptyStateWithKings();
-    baseState.board[8][4] = { type: PieceType.KING, player: Player.SENTE };
-    baseState.board[0][4] = { type: PieceType.KING, player: Player.GOTE };
+    // Then: 王手局面のスコアは非王手局面より CHECK_BONUS だけ低い
+    const noCheckState = createEmptyStateWithKings();
+    noCheckState.board[8][4] = { type: PieceType.KING, player: Player.SENTE };
+    noCheckState.board[0][4] = { type: PieceType.KING, player: Player.GOTE };
+    // 後手の飛車を先手玉に利かない位置（col 3 / row 5）に置く
+    noCheckState.board[5][3] = { type: PieceType.ROOK, player: Player.GOTE };
 
     const checkState = createEmptyStateWithKings();
     checkState.board[8][4] = { type: PieceType.KING, player: Player.SENTE };
     checkState.board[0][4] = { type: PieceType.KING, player: Player.GOTE };
-    // 後手の飛車で先手を王手
+    // 後手の飛車で先手玉(8,4)に王手（縦 col 4）
     checkState.board[7][4] = { type: PieceType.ROOK, player: Player.GOTE };
 
     const ai = new ShogiAI(Player.SENTE, 1);
-    const baseScore = ai._evaluate(baseState);
+    const noCheckScore = ai._evaluate(noCheckState);
     const checkScore = ai._evaluate(checkState);
-    // 王手されている局面はAI不利なのでスコアが低い
-    expect(checkScore).toBeLessThan(baseScore);
+    // 王手されている局面は CHECK_BONUS 分だけ低い
+    expect(checkScore - noCheckScore).toBe(-AI_CONFIG.CHECK_BONUS);
   });
 
   test('_quiescenceSearch: 取り手がある場合に探索が進む（depth > 0）', () => {
