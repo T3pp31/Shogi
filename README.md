@@ -30,7 +30,7 @@ ES Modulesを使用しているため、ローカルサーバーが必要です�
 python3 -m http.server 8000
 
 # Node.js (npx)
-npx serve .
+npx serve -l 8000 .
 ```
 
 ブラウザで `http://localhost:8000` を開いてください。
