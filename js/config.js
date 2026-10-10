@@ -68,7 +68,7 @@ export const PIECE_VALUES = {
   pawn: 100,
   prook: 1300,
   pbishop: 1100,
-  psilver: 420,
+  psilver: 520,
   pknight: 420,
   plance: 420,
   ppawn: 420,

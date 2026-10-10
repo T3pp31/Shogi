@@ -41,6 +41,7 @@ import {
   DOM_SELECTORS,
   UI_TEXT,
   SOUND_CONFIG,
+  PIECE_VALUES,
 } from '../js/config.js';
 
 // ============================================================
@@ -481,5 +482,32 @@ describe('SOUND_CONFIG', () => {
     requiredSections.forEach(section => {
       expect(SOUND_CONFIG).toHaveProperty(section);
     });
+  });
+});
+
+describe('PIECE_VALUES', () => {
+  test('成駒の価値は対応する素駒以上である', () => {
+    // Given: 素駒と成駒のペア
+    // When: 各ペアの価値を比較する
+    // Then: すべて成駒 >= 素駒（成りは移動力向上のため価値が下がらない）
+    const promotedPairs = [
+      ['pawn', 'ppawn'],
+      ['lance', 'plance'],
+      ['knight', 'pknight'],
+      ['silver', 'psilver'],
+      ['bishop', 'pbishop'],
+      ['rook', 'prook'],
+    ];
+    promotedPairs.forEach(([base, promoted]) => {
+      expect(PIECE_VALUES[promoted]).toBeGreaterThanOrEqual(PIECE_VALUES[base]);
+    });
+  });
+
+  test('psilver は素の銀以上かつ金以下である', () => {
+    // Given: silver / psilver / gold の価値
+    // When: psilver を比較する
+    // Then: silver <= psilver <= gold（成銀は金と同等の移動力を持つ）
+    expect(PIECE_VALUES.psilver).toBeGreaterThanOrEqual(PIECE_VALUES.silver);
+    expect(PIECE_VALUES.psilver).toBeLessThanOrEqual(PIECE_VALUES.gold);
   });
 });
