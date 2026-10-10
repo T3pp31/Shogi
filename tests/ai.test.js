@@ -834,9 +834,10 @@ describe('ShogiAI - _minimax', () => {
   });
 
   test('詰みの局面は極端な値を返す', () => {
-    // Given: 先手AIにとって詰みの局面（先手が詰んでいる = 最小化の場面）
-    // When: _minimax(state, 0, ...) で isMaximizing=false のとき合法手がない
-    // Then: Infinity相当の値が返る（最小化側なので相手が有利＝高い値）
+    // Given: 先手AIにとって詰みの局面（先手玉(0,0)が後手飛車(2,0)に王手され、
+    //        金3枚に全ての逃げ道を封じられ、合駒・取る手もない）
+    // When: _minimax(state, 1, ...) で isMaximizing=true のとき合法手がない
+    // Then: -Infinity が返る（詰まされている側の評価は最小値）
     const state = createEmptyStateWithKings();
     // 先手の玉を詰み局面にする
     state.board[0][0] = { type: PieceType.KING, player: Player.SENTE };
@@ -850,10 +851,27 @@ describe('ShogiAI - _minimax', () => {
     state.currentPlayer = Player.SENTE;
 
     const ai = new ShogiAI(Player.SENTE, 1);
-    // 深度1で先手（isMaximizing=true）の手を探索する
-    // 先手が合法手なければ -Infinity が返るべき
     const score = ai._minimax(state, 1, -Infinity, Infinity, true);
-    expect(typeof score).toBe('number');
+    expect(score).toBe(-Infinity);
+  });
+
+  test('同一配置でも玉が逃げられる場合は詰みスコアにならない', () => {
+    // Given: 同じ駒配置で先手玉だけを(3,3)（飛の利き外）に移した局面
+    // When: _minimax(state, 1, ...) を呼ぶ
+    // Then: 合法手があるため有限の評価値が返る（詰み検出が偽陽性でないことの確認）
+    const state = createEmptyStateWithKings();
+    state.board[3][3] = { type: PieceType.KING, player: Player.SENTE };
+    state.board[8][8] = { type: PieceType.KING, player: Player.GOTE };
+    state.board[0][1] = { type: PieceType.GOLD, player: Player.GOTE };
+    state.board[1][0] = { type: PieceType.GOLD, player: Player.GOTE };
+    state.board[1][1] = { type: PieceType.GOLD, player: Player.GOTE };
+    state.board[2][0] = { type: PieceType.ROOK, player: Player.GOTE };
+    state.currentPlayer = Player.SENTE;
+
+    const ai = new ShogiAI(Player.SENTE, 1);
+    const score = ai._minimax(state, 1, -Infinity, Infinity, true);
+    expect(isFinite(score)).toBe(true);
+    expect(score).toBeGreaterThan(-100000);
   });
 
   test('isMaximizing=falseで最小化プレイヤーの手が評価される', () => {
