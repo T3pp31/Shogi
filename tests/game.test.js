@@ -75,15 +75,15 @@ describe('GameState.reset() - 盤面初期化', () => {
     expect(state.gameOver).toBe(false);
   });
 
-  test('後手の1段目（row 0）に8枚の駒が配置される', () => {
+  test('後手の1段目（row 0）に9枚の駒が配置される', () => {
     // Given: 初期化後の盤面
     // When: board[0] の駒数を確認する
-    // Then: 8枚（全マスに駒）
+    // Then: 9枚（全マスに駒）
     const filledCount = state.board[0].filter(cell => cell !== null).length;
     expect(filledCount).toBe(BOARD_CONFIG.SIZE);
   });
 
-  test('先手の9段目（row 8）に8枚の駒が配置される', () => {
+  test('先手の9段目（row 8）に9枚の駒が配置される', () => {
     // Given: 初期化後の盤面
     // When: board[8] の駒数を確認する
     // Then: 9枚（全マスに駒）
