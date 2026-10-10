@@ -1,3 +1,6 @@
 node_modules/
 coverage/
 .vitest/
+
+# Claude Code 個人ローカル設定（共有しない）
+.claude/settings.local.json
