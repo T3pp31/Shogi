@@ -21,10 +21,10 @@ class MockAudioContext {
     this.currentTime = 0.5;
     this.sampleRate = 44100;
     this.destination = {};
-    this.resume = jest.fn(() => {
+    // 実際のブラウザ同様、resume() は Promise を返し、解決後に state が 'running' になる
+    this.resume = jest.fn(() => Promise.resolve().then(() => {
       this.state = 'running';
-      return Promise.resolve();
-    });
+    }));
     this.createBuffer = jest.fn((_channels, length, _sampleRate) => ({
       getChannelData: () => new Float32Array(length),
     }));
@@ -103,6 +103,11 @@ describe('sound.js - AudioContext の resume', () => {
     sound.playMove();
     expect(created).toHaveLength(1);
     expect(created[0].resume).toHaveBeenCalled();
+    // resume() は非同期: 呼び出し直後はまだ suspended のまま
+    expect(created[0].state).toBe('suspended');
+    // マイクロタスクを解決すると state が 'running' になる
+    await Promise.resolve();
+    expect(created[0].state).toBe('running');
   });
 
   test('running 状態の AudioContext に対しては resume を呼ばない', async () => {
@@ -115,19 +120,29 @@ describe('sound.js - AudioContext の resume', () => {
     sound.playMove();
     expect(created).toHaveLength(1);
     expect(created[0].resume).not.toHaveBeenCalled();
+    await Promise.resolve();
+    expect(created[0].state).toBe('running');
   });
 
   test('複数の play 関数を連続呼び出ししても AudioContext は 1 つだけ生成される', async () => {
     // Given: suspended で生成される AudioContext モック
     // When: playMove / playCapture / playCheck / playCheckmate を連続呼び出し
-    // Then: 生成は 1 回、resume は suspended 解消のため 1 回だけ
+    // Then: 生成は 1 回。resume() は非同期のため、同一ティック内では
+    //       state が 'suspended' のまま各呼び出しで resume され得る。
+    //       マイクロタスク解決後に state は 'running' になる。
     const sound = await loadSoundModule();
     sound.playMove();
     sound.playCapture();
     sound.playCheck();
     sound.playCheckmate();
     expect(created).toHaveLength(1);
-    expect(created[0].resume).toHaveBeenCalledTimes(1);
+    // 解決前は suspended のままなので、複数回 resume が呼ばれ得る
+    expect(created[0].state).toBe('suspended');
+    const resumeCallsBeforeResolve = created[0].resume.mock.calls.length;
+    expect(resumeCallsBeforeResolve).toBeGreaterThanOrEqual(1);
+    await Promise.resolve();
+    expect(created[0].state).toBe('running');
+    expect(created[0].resume).toHaveBeenCalledTimes(resumeCallsBeforeResolve);
   });
 
   test('後手選択相当: ジェスチャー外の初回再生でも resume が呼ばれる', async () => {
@@ -137,6 +152,9 @@ describe('sound.js - AudioContext の resume', () => {
     const sound = await loadSoundModule();
     sound.playCheckmate();
     expect(created[0].resume).toHaveBeenCalled();
+    expect(created[0].state).toBe('suspended');
+    await Promise.resolve();
+    expect(created[0].state).toBe('running');
   });
 });
 
