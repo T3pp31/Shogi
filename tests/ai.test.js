@@ -558,17 +558,82 @@ describe('ShogiAI - _evaluateKingSafety', () => {
     expect(score).toBe(0);
   });
 
-  test('AI側の王の隣に味方駒があると正のスコア', () => {
-    // Given: 先手王(8,4)の隣(8,3)に先手の金
+  test('先手玉周囲に金1枚・後手玉周囲の守備駒0のとき KING_SAFETY_BONUS * 1 を返す', () => {
+    // Given: 先手玉(8,4)の隣(8,3)に先手の金、後手玉(0,4)の周囲に守備駒なし
+    //   （後手玉の周囲8マスが空であることを前提として明示）
     // When: _evaluateKingSafety
-    // Then: KING_SAFETY_BONUS 以上の正スコア
+    // Then: (1 - 0) * KING_SAFETY_BONUS に厳密一致
     const state = createEmptyStateWithKings();
     state.board[8][4] = { type: PieceType.KING, player: Player.SENTE };
     state.board[0][4] = { type: PieceType.KING, player: Player.GOTE };
     state.board[8][3] = { type: PieceType.GOLD, player: Player.SENTE };
+    // 前提: 後手玉周囲の守備駒は0
     const ai = new ShogiAI(Player.SENTE, 1);
+    expect(ai._countKingDefenders(state, Player.GOTE)).toBe(0);
     const score = ai._evaluateKingSafety(state);
-    expect(score).toBeGreaterThanOrEqual(AI_CONFIG.KING_SAFETY_BONUS);
+    expect(score).toBe(AI_CONFIG.KING_SAFETY_BONUS * 1);
+  });
+
+  test('先手玉周囲に金2枚・後手玉周囲の守備駒0のとき KING_SAFETY_BONUS * 2 を返す', () => {
+    // Given: 先手玉(8,4)の周囲2マスに先手の金、後手玉(0,4)の周囲に守備駒なし
+    // When: _evaluateKingSafety
+    // Then: (2 - 0) * KING_SAFETY_BONUS に厳密一致
+    const state = createEmptyStateWithKings();
+    state.board[8][4] = { type: PieceType.KING, player: Player.SENTE };
+    state.board[0][4] = { type: PieceType.KING, player: Player.GOTE };
+    state.board[8][3] = { type: PieceType.GOLD, player: Player.SENTE };
+    state.board[8][5] = { type: PieceType.GOLD, player: Player.SENTE };
+    // 前提: 後手玉周囲の守備駒は0
+    const ai = new ShogiAI(Player.SENTE, 1);
+    expect(ai._countKingDefenders(state, Player.GOTE)).toBe(0);
+    const score = ai._evaluateKingSafety(state);
+    expect(score).toBe(AI_CONFIG.KING_SAFETY_BONUS * 2);
+  });
+
+  test('先手玉周囲に金2枚・後手玉周囲に金1枚のとき KING_SAFETY_BONUS * 1 を返す（差分計算）', () => {
+    // Given: 先手玉(8,4)の周囲2マスに先手の金、後手玉(0,4)の隣(0,3)に後手の金
+    // When: _evaluateKingSafety
+    // Then: (2 - 1) * KING_SAFETY_BONUS に厳密一致（後手玉との差分が計算される）
+    const state = createEmptyStateWithKings();
+    state.board[8][4] = { type: PieceType.KING, player: Player.SENTE };
+    state.board[0][4] = { type: PieceType.KING, player: Player.GOTE };
+    state.board[8][3] = { type: PieceType.GOLD, player: Player.SENTE };
+    state.board[8][5] = { type: PieceType.GOLD, player: Player.SENTE };
+    state.board[0][3] = { type: PieceType.GOLD, player: Player.GOTE };
+    const ai = new ShogiAI(Player.SENTE, 1);
+    expect(ai._countKingDefenders(state, Player.GOTE)).toBe(1);
+    const score = ai._evaluateKingSafety(state);
+    expect(score).toBe((2 - 1) * AI_CONFIG.KING_SAFETY_BONUS);
+  });
+
+  test('先手玉周囲に金1枚・後手玉周囲に金1枚のとき 0 を返す（相殺の検証）', () => {
+    // Given: 先手玉(8,4)の隣(8,3)に先手の金、後手玉(0,4)の隣(0,3)に後手の金
+    // When: _evaluateKingSafety
+    // Then: (1 - 1) * KING_SAFETY_BONUS = 0 に厳密一致
+    const state = createEmptyStateWithKings();
+    state.board[8][4] = { type: PieceType.KING, player: Player.SENTE };
+    state.board[0][4] = { type: PieceType.KING, player: Player.GOTE };
+    state.board[8][3] = { type: PieceType.GOLD, player: Player.SENTE };
+    state.board[0][3] = { type: PieceType.GOLD, player: Player.GOTE };
+    const ai = new ShogiAI(Player.SENTE, 1);
+    expect(ai._countKingDefenders(state, Player.SENTE)).toBe(1);
+    expect(ai._countKingDefenders(state, Player.GOTE)).toBe(1);
+    const score = ai._evaluateKingSafety(state);
+    expect(score).toBe(0);
+  });
+
+  test('両玉とも守備駒0枚のとき 0 を返す（境界ケース）', () => {
+    // Given: 先手玉(8,4)・後手玉(0,4)のみで両玉周囲の守備駒が0
+    // When: _evaluateKingSafety
+    // Then: (0 - 0) * KING_SAFETY_BONUS = 0 に厳密一致
+    const state = createEmptyStateWithKings();
+    state.board[8][4] = { type: PieceType.KING, player: Player.SENTE };
+    state.board[0][4] = { type: PieceType.KING, player: Player.GOTE };
+    const ai = new ShogiAI(Player.SENTE, 1);
+    expect(ai._countKingDefenders(state, Player.SENTE)).toBe(0);
+    expect(ai._countKingDefenders(state, Player.GOTE)).toBe(0);
+    const score = ai._evaluateKingSafety(state);
+    expect(score).toBe(0);
   });
 });
 
