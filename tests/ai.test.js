@@ -823,14 +823,16 @@ describe('ShogiAI - _minimax', () => {
     expect(isFinite(score)).toBe(true);
   });
 
-  test('depth=1でも数値が返る', () => {
+  test('depth=1でも有限の数値が返り、範囲内に収まる', () => {
     // Given: 初期盤面、depth=1
     // When: _minimax(state, 1, -Infinity, Infinity, true)
-    // Then: 数値が返る
+    // Then: 数値が返り、NaN/Infinity ではなく、_evaluate の範囲内（|score| < 100000）に収まる
     const state = new GameState();
     const ai = new ShogiAI(Player.SENTE, 1);
     const score = ai._minimax(state, 1, -Infinity, Infinity, true);
     expect(typeof score).toBe('number');
+    expect(Number.isFinite(score)).toBe(true);
+    expect(Math.abs(score)).toBeLessThan(100000);
   });
 
   test('詰みの局面は極端な値を返す', () => {
