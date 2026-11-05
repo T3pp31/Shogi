@@ -8,7 +8,7 @@
  * | 1 | BOARD_CONFIG.SIZE         | 正常系 | 値の確認                             | 9                               |
  * | 2 | BOARD_CONFIG.MAX_INDEX    | 正常系 | 値の確認                             | 8（SIZE - 1）                   |
  * | 3 | BOARD_CONFIG.MIN_INDEX    | 正常系 | 値の確認                             | 0                               |
- * | 4 | BOARD_CONFIG.STAR_POINTS  | 正常系 | 配列の要素数と各座標                 | 4点、row/col 3または6           |
+ * | 4 | BOARD_CONFIG.STAR_POINTS  | 正常系 | 配列の要素数と各座標                 | 4点、(2,2)(2,6)(6,2)(6,6)       |
  * | 5 | SENTE_PROMOTION_ZONE      | 正常系 | 配列の内容                           | [0,1,2]                         |
  * | 6 | GOTE_PROMOTION_ZONE       | 正常系 | 配列の内容                           | [6,7,8]                         |
  * | 7 | SENTE_PAWN_LANCE_MIN_ROW  | 正常系 | 値の確認（境界値）                   | 0（盤面の最小インデックス）     |
@@ -105,7 +105,7 @@ describe('BOARD_CONFIG', () => {
     expect(uniqueKeys.size).toBe(keys.length);
   });
 
-  test('STAR_POINTS は (3,3), (3,6), (6,3), (6,6) を含む', () => {
+  test('STAR_POINTS は (2,2), (2,6), (6,2), (6,6) を含む', () => {
     // Given: 将棋盤の標準的な星点座標
     // When: 配列に期待座標が含まれるか確認
     // Then: 4座標全て含まれる
