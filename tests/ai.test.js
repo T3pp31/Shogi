@@ -560,7 +560,7 @@ describe('ShogiAI - _evaluateKingSafety', () => {
 
   test('先手玉周囲に金1枚・後手玉周囲の守備駒0のとき KING_SAFETY_BONUS * 1 を返す', () => {
     // Given: 先手玉(8,4)の隣(8,3)に先手の金、後手玉(0,4)の周囲に守備駒なし
-    //   （後手玉の周囲8マスが空であることを前提として明示）
+    //   （後手玉の周囲マスが空であることを前提として明示）
     // When: _evaluateKingSafety
     // Then: (1 - 0) * KING_SAFETY_BONUS に厳密一致
     const state = createEmptyStateWithKings();
@@ -601,6 +601,7 @@ describe('ShogiAI - _evaluateKingSafety', () => {
     state.board[8][5] = { type: PieceType.GOLD, player: Player.SENTE };
     state.board[0][3] = { type: PieceType.GOLD, player: Player.GOTE };
     const ai = new ShogiAI(Player.SENTE, 1);
+    expect(ai._countKingDefenders(state, Player.SENTE)).toBe(2);
     expect(ai._countKingDefenders(state, Player.GOTE)).toBe(1);
     const score = ai._evaluateKingSafety(state);
     expect(score).toBe((2 - 1) * AI_CONFIG.KING_SAFETY_BONUS);
@@ -622,7 +623,7 @@ describe('ShogiAI - _evaluateKingSafety', () => {
     expect(score).toBe(0);
   });
 
-  test('両玉とも守備駒0枚のとき 0 を返す（境界ケース）', () => {
+  test('両玉とも守備駒0のとき 0 を返す（境界ケース）', () => {
     // Given: 先手玉(8,4)・後手玉(0,4)のみで両玉周囲の守備駒が0
     // When: _evaluateKingSafety
     // Then: (0 - 0) * KING_SAFETY_BONUS = 0 に厳密一致
@@ -634,6 +635,39 @@ describe('ShogiAI - _evaluateKingSafety', () => {
     expect(ai._countKingDefenders(state, Player.GOTE)).toBe(0);
     const score = ai._evaluateKingSafety(state);
     expect(score).toBe(0);
+  });
+
+  test('先手玉の守備駒0・後手玉の守備駒1のとき -KING_SAFETY_BONUS を返す（負スコア）', () => {
+    // Given: 先手玉(8,4)の周囲に守備駒なし、後手玉(0,4)の隣(0,3)に後手の金
+    // When: _evaluateKingSafety（先手AI視点）
+    // Then: (0 - 1) * KING_SAFETY_BONUS = -KING_SAFETY_BONUS に厳密一致
+    //   （実装が負値をクランプしたり絶対値化したりしていないことを検証）
+    const state = createEmptyStateWithKings();
+    state.board[8][4] = { type: PieceType.KING, player: Player.SENTE };
+    state.board[0][4] = { type: PieceType.KING, player: Player.GOTE };
+    state.board[0][3] = { type: PieceType.GOLD, player: Player.GOTE };
+    const ai = new ShogiAI(Player.SENTE, 1);
+    expect(ai._countKingDefenders(state, Player.SENTE)).toBe(0);
+    expect(ai._countKingDefenders(state, Player.GOTE)).toBe(1);
+    const score = ai._evaluateKingSafety(state);
+    expect(score).toBe(-AI_CONFIG.KING_SAFETY_BONUS);
+  });
+
+  test('後手AI視点では（後手守備駒 - 先手守備駒）* KING_SAFETY_BONUS を返す', () => {
+    // Given: 先手玉(8,4)の周囲に先手の金1枚、後手玉(0,4)の周囲に後手の金2枚
+    // When: 後手AI（ShogiAI(Player.GOTE)）で _evaluateKingSafety
+    // Then: (2 - 1) * KING_SAFETY_BONUS に厳密一致（AI視点の符号が正しく反転する）
+    const state = createEmptyStateWithKings();
+    state.board[8][4] = { type: PieceType.KING, player: Player.SENTE };
+    state.board[0][4] = { type: PieceType.KING, player: Player.GOTE };
+    state.board[8][3] = { type: PieceType.GOLD, player: Player.SENTE };
+    state.board[0][3] = { type: PieceType.GOLD, player: Player.GOTE };
+    state.board[0][5] = { type: PieceType.GOLD, player: Player.GOTE };
+    const ai = new ShogiAI(Player.GOTE, 1);
+    expect(ai._countKingDefenders(state, Player.SENTE)).toBe(1);
+    expect(ai._countKingDefenders(state, Player.GOTE)).toBe(2);
+    const score = ai._evaluateKingSafety(state);
+    expect(score).toBe((2 - 1) * AI_CONFIG.KING_SAFETY_BONUS);
   });
 });
 
