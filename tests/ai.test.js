@@ -51,6 +51,7 @@ import { ShogiAI } from '../js/ai.js';
 import { GameState } from '../js/game.js';
 import { Player, PieceType } from '../js/pieces.js';
 import { AI_CONFIG, PIECE_VALUES, POSITION_BONUS, BOARD_CONFIG } from '../js/config.js';
+import { getLegalMoves, getLegalDrops, getPromotionStatus } from '../js/moves.js';
 import { clearBoard, clearHands } from './helpers/board-test-helpers.js';
 
 // ---- ヘルパー関数 ----
@@ -957,14 +958,90 @@ describe('ShogiAI - カバレッジ向上（静止探索・特殊ケース）', 
     expect(score).toBe(0);
   });
 
-  test('getBestMove: depth=2の探索でも合法手を返す', () => {
-    // Given: 初期盤面、depth=2
-    // When: getBestMove
-    // Then: 合法手を返す（ミニマックスの最小化側も実行される）
+  test('getBestMove: depth=2の探索でも合法手を返し、最小化側が実際に実行される', () => {
+    // Given: 初期盤面、先手AI、depth=2
     const state = new GameState();
     const ai = new ShogiAI(Player.SENTE, 2);
+
+    // _minimax が isMaximizing=false で呼ばれた回数を数える
+    const minimaxSpy = jest.spyOn(ai, '_minimax');
+
+    // When: getBestMove
     const move = ai.getBestMove(state);
+
+    // Then 1: null でなく、合法手の種類である
     expect(move).not.toBeNull();
     expect(move.type).toMatch(/^(move|drop)$/);
+
+    // Then 2: 最小化側（isMaximizing=false）が実際に探索されている
+    const minimizingCalls = minimaxSpy.mock.calls.filter(call => call[4] === false);
+    expect(minimizingCalls.length).toBeGreaterThan(0);
+
+    // Then 3: 独立に生成した合法手リストに含まれている
+    const legalMoves = [];
+    for (let row = 0; row < BOARD_CONFIG.SIZE; row++) {
+      for (let col = 0; col < BOARD_CONFIG.SIZE; col++) {
+        const piece = state.getPiece(row, col);
+        if (!piece || piece.player !== Player.SENTE) continue;
+        for (const dest of getLegalMoves(state, row, col)) {
+          const promoStatus = getPromotionStatus(piece, row, dest.row);
+          if (promoStatus === 'mandatory') {
+            legalMoves.push({ type: 'move', fromRow: row, fromCol: col, toRow: dest.row, toCol: dest.col, promote: true });
+          } else if (promoStatus === 'optional') {
+            legalMoves.push({ type: 'move', fromRow: row, fromCol: col, toRow: dest.row, toCol: dest.col, promote: true });
+            legalMoves.push({ type: 'move', fromRow: row, fromCol: col, toRow: dest.row, toCol: dest.col, promote: false });
+          } else {
+            legalMoves.push({ type: 'move', fromRow: row, fromCol: col, toRow: dest.row, toCol: dest.col, promote: false });
+          }
+        }
+      }
+    }
+    for (const pieceType of Object.keys(state.hands[Player.SENTE])) {
+      if (state.hands[Player.SENTE][pieceType] <= 0) continue;
+      for (const dest of getLegalDrops(state, Player.SENTE, pieceType)) {
+        legalMoves.push({ type: 'drop', toRow: dest.row, toCol: dest.col, pieceType });
+      }
+    }
+    expect(legalMoves.some(m =>
+      m.type === move.type &&
+      m.toRow === move.toRow &&
+      m.toCol === move.toCol &&
+      (m.type === 'drop' ? m.pieceType === move.pieceType
+        : m.fromRow === move.fromRow && m.fromCol === move.fromCol && m.promote === move.promote)
+    )).toBe(true);
+
+    // Then 4: 手をクローンに適用すると一貫した状態になる
+    const applied = ai._applyMove(state, move);
+    expect(applied.currentPlayer).toBe(Player.GOTE);
+    expect(state.currentPlayer).toBe(Player.SENTE); // 元状態は不変
+    const placed = applied.getPiece(move.toRow, move.toCol);
+    expect(placed).not.toBeNull();
+    expect(placed.player).toBe(Player.SENTE);
+    if (move.type === 'move') {
+      expect(applied.getPiece(move.fromRow, move.fromCol)).toBeNull();
+    } else {
+      expect(applied.hands[Player.SENTE][move.pieceType])
+        .toBe(state.hands[Player.SENTE][move.pieceType] - 1);
+    }
+
+    minimaxSpy.mockRestore();
+  });
+
+  test('getBestMove: depth=2 の評価は depth=1 と同一にならず、より深い探索が有効', () => {
+    // Given: 初期盤面（先手番）
+    const state = new GameState();
+    const ai = new ShogiAI(Player.SENTE, 2);
+
+    // When: 同じ状態から depth=1 と depth=2 で _minimax を評価
+    const scoreDepth1 = ai._minimax(state, 1, -Infinity, Infinity, true);
+    const scoreDepth2 = ai._minimax(state, 2, -Infinity, Infinity, true);
+
+    // Then: どちらも有限の数値で、depth が1に縮退していない（探索結果が同一ではない）
+    expect(typeof scoreDepth1).toBe('number');
+    expect(typeof scoreDepth2).toBe('number');
+    expect(isFinite(scoreDepth1)).toBe(true);
+    expect(isFinite(scoreDepth2)).toBe(true);
+    // depth=1 は1手読み（静止探索のみ）、depth=2 は2手読みなので一般に評価値は一致しない
+    expect(scoreDepth2).not.toBe(scoreDepth1);
   });
 });
